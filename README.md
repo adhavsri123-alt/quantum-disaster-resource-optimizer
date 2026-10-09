@@ -78,7 +78,14 @@ quantum-disaster/
 │
 └── utils/
     ├── distance.py           # Distance/path utilities
+    ├── explainability.py     # Natural language allocation explanations
     └── metrics.py            # Performance metrics (response time, unmet demand, etc.)
+├── scripts/
+│   └── sync_backend.py       # Safe, opt-in pre-sync test verification and GitHub push
+├── test_simulation.py        # Stage 1 Simulation layer test
+├── test_optimization.py      # Stage 2 Optimization & Benchmark test
+├── test_dynamic_simulation.py # Dynamic events & re-optimization test (8 tests)
+└── test_comprehensive.py     # Comprehensive mathematical & edge-case audit test suite (43 tests)
 ```
 
 ---
@@ -93,21 +100,64 @@ pip install -r requirements.txt
 
 ---
 
-## Running — Stage 1 (Simulation Test)
+## Running Verification Tests
+
+Run each test suite independently or together:
 
 ```bash
-# Default: Scenario ALPHA, seed=42
+# 1. Campus simulation, travel times, and resource lifecycle
 python test_simulation.py
 
-# Scenario BETA
-python test_simulation.py --scenario beta
+# 2. Side-by-side Greedy vs QUBO benchmark across Alpha, Beta, Gamma, Stress
+python test_optimization.py
 
-# Scenario GAMMA
-python test_simulation.py --scenario gamma
+# 3. Dynamic events (new emergencies, road blocks, resource shifts, resolution)
+python test_dynamic_simulation.py
 
-# Random scenario with 4 emergencies, seed=99
-python test_simulation.py --scenario random --seed 99 --n 4
+# 4. Comprehensive audit suite (QUBO math, capacity trimming, edge cases, immutability)
+python test_comprehensive.py
 ```
+
+---
+
+## Solvers & Mathematical Formulation
+
+### 1. Greedy Baseline Solver (`optimization/baseline.py`)
+Deterministic, priority-ordered allocation algorithm:
+- Ranks active emergencies descending by composite priority score:
+  `Priority = (Severity * 3.0) + (People * 0.1) - (TravelTime / 10.0) - (ResourceReq * 0.05)`
+- Greedily allocates available resources up to each emergency's requirements.
+- Strictly respects capacity limits without mutating input simulation state.
+
+### 2. QUBO Solver (`optimization/qubo.py`)
+Formulates the resource triage as a Binary Quadratic Model (BQM):
+- **Decision variables**: $x_{i, r, k} \in \{0, 1\}$ representing whether emergency $i$ receives candidate level $k$ for resource $r$.
+- **One-hot penalty**: For each $(i, r)$ pair, exactly one candidate level must be selected:
+  $$P_{\text{onehot}} \left(\sum_k x_{i, r, k} - 1\right)^2 = -P_{\text{onehot}} \sum_k x_{i, r, k} + 2 P_{\text{onehot}} \sum_{j < k} x_{i, r, j} x_{i, r, k}$$
+- **Capacity penalty**: Quadratic pairwise penalty applied to pairs of allocations across emergencies that together exceed pool capacity.
+- **Formulation Limitation Note**: Pairwise quadratic terms cannot strictly constrain combinations of three or more emergencies without auxiliary slack variables. When 3+ emergencies each request resources within pairwise limits but collectively exceed capacity, the **post-sampling decoder** trims excess starting from lowest-severity emergencies.
+- **Classical CPU Sampler**: Uses `neal.SimulatedAnnealingSampler` running classical CPU Simulated Annealing (heuristic classical search, NOT quantum hardware).
+- **Transparency**: The solver reports both `raw_sample_feasible` (whether the raw SA sample satisfied capacity) and `final_allocation_feasible` (after decoder verification) along with execution timing breakdown (`qubo_formulation_time_ms`, `bqm_construction_time_ms`, `sampler_time_ms`, `decode_time_ms`, `total_solve_time_ms`).
+
+---
+
+## Safe GitHub Synchronization (`scripts/sync_backend.py`)
+
+To ensure only verified, passing code reaches GitHub without accidental pushes to `main` or committing sensitive files:
+
+```bash
+# Pre-flight check (runs all 4 test suites without committing)
+python scripts/sync_backend.py --dry-run
+
+# Full verify and sync to origin/backend-optimization
+python scripts/sync_backend.py -m "Your commit message"
+```
+
+Safety features:
+- Verifies current branch is strictly `backend-optimization`.
+- Aborts if any test fails across all 4 test suites.
+- Aborts if unmerged git conflicts or forbidden files (`.env`, secrets, virtualenvs) are found.
+- Never force-pushes or rewrites published history.
 
 ---
 
@@ -124,15 +174,15 @@ streamlit run app.py
 | Stage | Status | Description |
 |---|---|---|
 | **1 — Simulation** | ✅ Complete | Campus graph, scenarios, resources, travel times |
-| **2 — Optimisation** | 🔲 Planned | Greedy baseline + QUBO solver with dimod/neal |
+| **2 — Optimisation** | ✅ Complete | Greedy baseline + QUBO solver with dimod/neal + comprehensive tests |
 | **3 — Streamlit UI** | 🔲 Planned | Interactive dashboard, map, metrics, comparison |
 
 ---
 
 ## Key Design Decisions
 
-- **Reproducible**: All scenarios use a fixed seed — same input always produces the same scenario.
-- **Modular**: Simulation, optimisation, and UI are fully decoupled.
-- **Extensible**: New emergency types, locations, or solvers require only adding to the relevant registry dict.
-- **No hardcoded results**: All metrics (response time, utilisation) are computed dynamically from the actual allocation.
-- **Local-only**: No cloud/QPU dependency — QUBO solved via Simulated Annealing (dwave-neal).
+- **Reproducible**: Fixed random seeds guarantee deterministic results across runs.
+- **Fair Benchmarking**: Independent scenario copies for both solvers; no hidden greedy passes inside the QUBO decoder.
+- **State Immutability**: Neither solver mutates the underlying simulation state during optimization.
+- **Local Classical Execution**: No quantum cloud required; runs locally via D-Wave `neal`.
+

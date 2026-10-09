@@ -202,13 +202,14 @@ The current backend is a pure Python architecture. Web interface layers (such as
   - **File**: `optimization/qubo.py`
   - **Purpose**: Builds QUBO quadratic dictionary $Q$ and decision variable metadata.
 
-- **`QUBOFormulator.decode_solution(sample: Dict[str, int], state: SimulationState) -> Tuple[AllocationPlan, bool]`**
+- **`QUBOFormulator.decode_solution(sample: Dict[str, int], state: SimulationState) -> Tuple[AllocationPlan, bool, bool]`**
   - **File**: `optimization/qubo.py`
-  - **Purpose**: Decodes binary QUBO sample array into `AllocationPlan` and enforces physical capacity bounds.
+  - **Return**: `(plan, raw_feasible, final_feasible)`
+  - **Purpose**: Decodes binary QUBO sample array into `AllocationPlan`. Evaluates raw sample feasibility against resource capacities, applies hard capacity trimming to lowest-severity emergencies if excess exists (with no hidden secondary greedy filling), and verifies final allocation feasibility.
 
 - **`QUBOSolver.solve(state: SimulationState) -> AllocationPlan`**
   - **File**: `optimization/qubo.py`
-  - **Purpose**: Formulates QUBO, executes Simulated Annealing via `neal`, decodes best sample, and returns `AllocationPlan`.
+  - **Purpose**: Formulates QUBO, executes Simulated Annealing via `neal` on classical CPU, decodes best sample, records detailed timing breakdown (`qubo_formulation_time_ms`, `bqm_construction_time_ms`, `sampler_time_ms`, `decode_time_ms`, `total_solve_time_ms`), and returns `AllocationPlan` with transparency metadata.
 
 - **`SolverRegistry.get(name: str) -> Optional[object]`**
   - **File**: `optimization/solver.py`

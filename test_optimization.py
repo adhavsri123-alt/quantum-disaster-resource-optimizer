@@ -44,17 +44,19 @@ def run_comparison() -> List[Dict]:
     print("=" * 90)
 
     for scenario_name in scenarios:
-        state = create_simulation(scenario_name=scenario_name, seed=42)
-        total_capacity = state.resource_manager.capacity()
+        # Create a fresh reference state to inspect scenario metadata
+        ref_state = create_simulation(scenario_name=scenario_name, seed=42)
+        total_capacity = ref_state.resource_manager.capacity()
 
-        print(f"\n>>> Scenario: {scenario_name.upper()} ({len(state.emergencies)} emergencies)")
+        print(f"\n>>> Scenario: {scenario_name.upper()} ({len(ref_state.emergencies)} emergencies)")
         print("-" * 90)
 
         plans: Dict[str, AllocationPlan] = {}
 
         for name, solver in solvers:
-            # Run solver
-            plan: AllocationPlan = solver.solve(state)
+            # Provide equivalent, independently created copy of scenario for each solver
+            solver_state = create_simulation(scenario_name=scenario_name, seed=42)
+            plan: AllocationPlan = solver.solve(solver_state)
             plans[name] = plan
             metrics = plan.metrics
             metadata = plan.solver_metadata
@@ -78,8 +80,8 @@ def run_comparison() -> List[Dict]:
             # ------------------------------------------------------------------
             assert isinstance(plan, AllocationPlan), f"[{name}] plan is not AllocationPlan"
             assert plan.solver_name == name, f"[{name}] solver name mismatch"
-            assert len(plan.allocations) == len(state.emergencies), (
-                f"[{name}] Allocation count ({len(plan.allocations)}) != emergency count ({len(state.emergencies)})"
+            assert len(plan.allocations) == len(ref_state.emergencies), (
+                f"[{name}] Allocation count ({len(plan.allocations)}) != emergency count ({len(ref_state.emergencies)})"
             )
 
             # Assert non-negativity and capacity constraints
@@ -141,13 +143,26 @@ def run_comparison() -> List[Dict]:
                 f"Util: {util_pct:5.1f}% | Obj: {obj_score:7.4f} | Time: {runtime_ms:6.2f} ms{extra_meta}"
             )
 
+            if name == "QUBO Solver":
+                print(
+                    f"     |-- Breakdown : Formulate: {metadata.get('qubo_formulation_time_ms', 0):.2f}ms | "
+                    f"BQM: {metadata.get('bqm_construction_time_ms', 0):.2f}ms | "
+                    f"SA Sampler (CPU): {metadata.get('sampler_time_ms', 0):.2f}ms | "
+                    f"Decode: {metadata.get('decode_time_ms', 0):.2f}ms"
+                )
+                print(
+                    f"     |-- Properties: {metadata.get('num_variables', 0)} vars, "
+                    f"{metadata.get('num_quadratic_terms', 0)} quadratic terms | "
+                    f"Feasibility: {metadata.get('feasibility_status', 'N/A')}"
+                )
+
         # Print per-emergency allocation differences
         g_alloc = plans["Greedy Baseline"].allocations
         q_alloc = plans["QUBO Solver"].allocations
 
         print("\n  Detailed Allocation Comparison (Emergency-by-Emergency):")
         diff_count = 0
-        for em in state.emergencies:
+        for em in ref_state.emergencies:
             gr = g_alloc[em.id]
             qr = q_alloc[em.id]
 
@@ -177,7 +192,7 @@ def run_comparison() -> List[Dict]:
         if diff_count == 0:
             print("    -> Solvers produced identical allocations across all emergencies.")
         else:
-            print(f"    -> Solvers differed on {diff_count} out of {len(state.emergencies)} emergencies.")
+            print(f"    -> Solvers differed on {diff_count} out of {len(ref_state.emergencies)} emergencies.")
 
     # Print summary comparison table
     print("\n" + "=" * 110)
