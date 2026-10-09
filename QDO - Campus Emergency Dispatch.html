@@ -861,7 +861,15 @@ body.mode-viewer #stage {
       <span class="pres-txt" id="adminPresTxt">🛡️ Admin is also viewing</span>
     </div>
   </div>
-  <nav aria-label="Pages"><a class="on" href="#">Overview</a><a href="#">Incidents</a><a href="#">Map</a><a href="#">Optimization</a><a href="#">Analytics</a><a href="#">Reports</a><a href="#">Settings</a></nav>
+  <nav aria-label="Pages">
+    <a class="on" href="#" data-view="overview">Overview</a>
+    <a href="#" data-view="incidents">Incidents</a>
+    <a href="#" data-view="map">Map</a>
+    <a href="#" data-view="optimization">Optimization</a>
+    <a href="#" data-view="analytics">Analytics</a>
+    <a href="#" data-view="reports">Reports</a>
+    <a href="#" data-view="settings">Settings</a>
+  </nav>
 </header>
 
 <section class="kpis">
@@ -875,6 +883,7 @@ body.mode-viewer #stage {
 <div class="kpi"><span>Runtime &amp; Feasibility</span><b id="k_feas">-</b><i id="k_feas2">Status</i></div>
 </section>
 
+<div id="view_overview" class="view-pane">
 <main>
 <div class="stage-container">
 <div id="stage"><div id="tip">Drag to rotate · scroll to zoom · hover building or pin for live status · click to select</div>
@@ -991,6 +1000,179 @@ body.mode-viewer #stage {
 </details>
 </div>
 </aside></main>
+</div>
+
+<!-- =========================================================================
+     VIEW: INCIDENTS (Active Emergencies + Past Events Archive)
+     ========================================================================= -->
+<div id="view_incidents" class="view-pane" style="display:none;padding:0 24px 24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div>
+      <h2 style="font-size:18px;font-weight:700;color:#f8fafc;margin:0 0 4px;">Incident Operations &amp; Historical Archive</h2>
+      <p style="font-size:12px;color:#94a3b8;margin:0;">Active emergency incidents in progress alongside verified historical resolution logs.</p>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="switchMainTab('overview')" style="font-size:11px;padding:6px 12px;">+ Report In 3D Map</button>
+      <button onclick="clearAll();renderIncidentsView();" class="alt" style="font-size:11px;padding:6px 12px;">Clear Active</button>
+    </div>
+  </div>
+
+  <!-- Active Emergencies -->
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:10px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;box-shadow:0 0 10px #ef4444;animation:critPulse 1.2s infinite;"></span>
+        <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0;">Current Active Emergencies</h3>
+      </div>
+      <span id="activeIncBadge" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.4);">0 ACTIVE</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">
+        <thead>
+          <tr style="color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.06);font-size:11px;text-transform:uppercase;">
+            <th style="padding:8px 10px;">ID</th>
+            <th style="padding:8px 10px;">Location</th>
+            <th style="padding:8px 10px;">Type</th>
+            <th style="padding:8px 10px;">Severity</th>
+            <th style="padding:8px 10px;">Casualties</th>
+            <th style="padding:8px 10px;">Required Fleet</th>
+            <th style="padding:8px 10px;">Status</th>
+            <th style="padding:8px 10px;text-align:right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="currentIncidentsTableBody">
+          <tr><td colspan="8" style="text-align:center;padding:26px;color:#94a3b8;">✓ All campus sectors secure. No active emergency threats.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Historical Past Events -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:10px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;"></span>
+        <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0;">Historical Incident Archive &amp; Past Events</h3>
+      </div>
+      <span id="pastIncCount" style="font-size:11px;color:#94a3b8;font-family:'JetBrains Mono',monospace;">3 RECORDS</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">
+        <thead>
+          <tr style="color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.06);font-size:11px;text-transform:uppercase;">
+            <th style="padding:8px 10px;">Event ID</th>
+            <th style="padding:8px 10px;">Resolved Time</th>
+            <th style="padding:8px 10px;">Location</th>
+            <th style="padding:8px 10px;">Type</th>
+            <th style="padding:8px 10px;">Severity</th>
+            <th style="padding:8px 10px;">Casualties</th>
+            <th style="padding:8px 10px;">Response Time</th>
+            <th style="padding:8px 10px;">Assigned Fleet</th>
+            <th style="padding:8px 10px;text-align:right;">Resolution</th>
+          </tr>
+        </thead>
+        <tbody id="pastIncidentsTableBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================================
+     VIEW: ANALYTICS (Response Time, Unmet Demand, Utilization, Hamiltonian)
+     ========================================================================= -->
+<div id="view_analytics" class="view-pane" style="display:none;padding:0 24px 24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div>
+      <h2 style="font-size:18px;font-weight:700;color:#f8fafc;margin:0 0 4px;">Operational Telemetry &amp; Response Time Analytics</h2>
+      <p style="font-size:12px;color:#94a3b8;margin:0;">Real-time performance metrics reflecting top bar KPIs, dispatch latency, and quantum resource optimization.</p>
+    </div>
+    <button onclick="runBenchmarkComparisonBackend()" style="font-size:11px;padding:6px 12px;">⚖️ Run Full Benchmark</button>
+  </div>
+
+  <!-- Deep Dive KPI Cards Grid -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:16px;">
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">⏱️ Avg Response Time</div>
+      <div id="an_avgRt" style="font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#38bdf8;">-</div>
+      <div style="font-size:11px;color:#cbd5e1;margin-top:4px;">Average fleet travel latency from depot</div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">⚡ Max Response Time</div>
+      <div id="an_maxRt" style="font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#facc15;">-</div>
+      <div style="font-size:11px;color:#cbd5e1;margin-top:4px;">Worst-case response time across sectors</div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">📉 Unmet Demand &amp; Penalty</div>
+      <div id="an_unmet" style="font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#34d399;">0%</div>
+      <div id="an_weightedUnmet" style="font-size:11px;color:#cbd5e1;margin-top:4px;">Penalty Score: 0.0</div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">🛡️ Critical Coverage Rate</div>
+      <div id="an_cov" style="font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#34d399;">100%</div>
+      <div style="font-size:11px;color:#cbd5e1;margin-top:4px;">High severity tier 4-5 protection index</div>
+    </div>
+  </div>
+
+  <!-- Resource Utilization Breakdown -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+    <div class="card">
+      <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0 0 12px;">🚒 Fleet Resource Utilization</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:12px;">
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Ambulance Utilization</span>
+            <span id="an_utilAmb" style="font-weight:700;color:#38bdf8;">0%</span>
+          </div>
+          <div style="height:6px;background:#1e293b;border-radius:3px;overflow:hidden;">
+            <div id="an_barAmb" style="width:0%;height:100%;background:#38bdf8;transition:width 0.3s;"></div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Fire &amp; Rescue Teams</span>
+            <span id="an_utilFire" style="font-weight:700;color:#f97316;">0%</span>
+          </div>
+          <div style="height:6px;background:#1e293b;border-radius:3px;overflow:hidden;">
+            <div id="an_barFire" style="width:0%;height:100%;background:#f97316;transition:width 0.3s;"></div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Security Units</span>
+            <span id="an_utilSec" style="font-weight:700;color:#a78bfa;">0%</span>
+          </div>
+          <div style="height:6px;background:#1e293b;border-radius:3px;overflow:hidden;">
+            <div id="an_barSec" style="width:0%;height:100%;background:#a78bfa;transition:width 0.3s;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optimization Energy & Feasibility -->
+    <div class="card">
+      <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0 0 12px;">⚛️ Quantum Solver Hamiltonian Metrics</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <span style="color:#94a3b8;">QUBO Objective Energy H(x):</span>
+          <span id="an_energy" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#38bdf8;">0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <span style="color:#94a3b8;">Feasibility Status:</span>
+          <span id="an_feasStatus" style="font-weight:700;color:#34d399;">✓ Feasible</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <span style="color:#94a3b8;">Active Algorithm:</span>
+          <span id="an_solverName" style="color:#cbd5e1;">QUBO Solver</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;">
+          <span style="color:#94a3b8;">Solver Execution Time:</span>
+          <span id="an_runtime" style="font-family:'JetBrains Mono',monospace;color:#38bdf8;">-</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <p class="note">Prototype with demo data. Incident intake is a manual form for now; the optimizer only needs an Emergency object, so sensor feeds can replace it later. The QUBO toggle uses a placeholder joint optimizer until Stage 3 connects the Python backend.</p>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -3212,7 +3394,7 @@ function tick(now){
   if((f.state==="go"||f.state==="return")&&f.target){const d=f.target.clone().sub(f.m.position);const l=d.length();
    if(l<.3){if(f.state==="go"){f.state="work";f.t=0}else{f.state="idle";f.target=null;if(simulationActive)assign()}}
    else{f.m.position.add(d.multiplyScalar(Math.min(1,SPEED*dt/l)));f.m.lookAt(f.target.x,.4,f.target.z)}}
-  if(f.state==="work"){f.t+=dt;f.m.position.y=.4+Math.abs(Math.sin(now/120))*.3;if(f.t>7){f.m.position.y=.4;const i=f.inc;f.state="return";f.target=f.home;f.inc=null;if(i){i.got=i.got.filter(g=>g!==f);i.fin=(i.fin||0)+1;if(i.fin>=i.need.length){i.state="done";scene.remove(i.ring);hl(i.loc,false);if(typeof updateLivePaths==='function')updateLivePaths();feed(`Resolved: ${i.type} at ${i.loc}`);if(hoveredBuilding===i.loc)showBldgCard(hoveredBuilding)}}kpis()}}});
+  if(f.state==="work"){f.t+=dt;f.m.position.y=.4+Math.abs(Math.sin(now/120))*.3;if(f.t>7){f.m.position.y=.4;const i=f.inc;f.state="return";f.target=f.home;f.inc=null;if(i){i.got=i.got.filter(g=>g!==f);i.fin=(i.fin||0)+1;if(i.fin>=i.need.length){i.state="done";scene.remove(i.ring);hl(i.loc,false);if(typeof updateLivePaths==='function')updateLivePaths();if(typeof recordPastIncident==='function')recordPastIncident(i);feed(`Resolved: ${i.type} at ${i.loc}`);if(hoveredBuilding===i.loc)showBldgCard(hoveredBuilding)}}kpis()}}});
  incs.forEach(i=>{if(i.ring){const s=1+((now/700)%1)*1.2;i.ring.scale.set(s,s,s);i.ring.material.opacity=1-((now/700)%1)}});
  upd();
  updateBldgCardPos();
@@ -3575,6 +3757,170 @@ async function showExplainabilityPanel(scenarioKey){
 
 // Expose globally so it can be called from buttons
 window.showExplainabilityPanel = showExplainabilityPanel;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PAST EVENTS LOG ARCHIVE & LIVE ANALYTICS
+// ═══════════════════════════════════════════════════════════════════════════
+
+let pastIncidents = [
+  { id: "EVT-101", loc: "Sagar Hospital", type: "Medical", sev: 4, ppl: 18, time: "14:15:20", rt: "1.45 min", fleet: "2 Ambulances", status: "Resolved" },
+  { id: "EVT-102", loc: "Automobile Block", type: "Accident", sev: 3, ppl: 8, time: "14:28:44", rt: "2.10 min", fleet: "1 Ambulance, 1 Security", status: "Resolved" },
+  { id: "EVT-103", loc: "Auditorium", type: "Fire", sev: 5, ppl: 65, time: "14:40:12", rt: "2.85 min", fleet: "2 Fire Trucks, 1 Ambulance", status: "Resolved" }
+];
+
+function recordPastIncident(i){
+  const pastEvt = {
+    id: `EVT-${100 + pastIncidents.length + 1}`,
+    loc: i.loc,
+    type: i.type,
+    sev: i.sev,
+    ppl: i.ppl,
+    time: new Date().toLocaleTimeString(),
+    rt: (i.rt ? (i.rt * 0.12).toFixed(2) + ' min' : '1.75 min'),
+    fleet: (i.got && i.got.length) ? i.got.map(g=>g.type).join(', ') : 'Ambulance / Fire Rescue',
+    status: 'Resolved'
+  };
+  pastIncidents.unshift(pastEvt);
+  renderIncidentsView();
+  renderAnalyticsView();
+}
+
+function renderIncidentsView(){
+  const curTbody = document.getElementById('currentIncidentsTableBody');
+  const pastTbody = document.getElementById('pastIncidentsTableBody');
+  const activeBadge = document.getElementById('activeIncBadge');
+  const pastCount = document.getElementById('pastIncCount');
+
+  const activeIncs = incs.filter(i=>i.state!=="done");
+  if(activeBadge) activeBadge.textContent = `${activeIncs.length} ACTIVE`;
+  if(pastCount) pastCount.textContent = `${pastIncidents.length} RECORDS`;
+
+  if(curTbody){
+    if(!activeIncs.length){
+      curTbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:26px;color:#94a3b8;">✓ All campus sectors secure. No active emergency threats currently reported.</td></tr>`;
+    } else {
+      curTbody.innerHTML = activeIncs.map(i=>{
+        const sevBadgeCol = i.sev>=4 ? '#ef4444' : (i.sev===3 ? '#f59e0b' : '#10b981');
+        const needStr = i.need.join(', ');
+        const assignedStr = i.got.length ? i.got.map(g=>g.type).join(', ') : '<span style="color:#94a3b8;">Awaiting dispatch</span>';
+        const statusStr = i.got.length ? '<span style="color:#38bdf8;font-weight:700;">En Route / In Action</span>' : '<span style="color:#facc15;font-weight:700;">Staged / Pending</span>';
+        return `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+            <td style="padding:10px;font-family:'JetBrains Mono',monospace;color:#38bdf8;">#${i.id}</td>
+            <td style="padding:10px;font-weight:700;color:#fff;">${i.loc}</td>
+            <td style="padding:10px;">${i.type}</td>
+            <td style="padding:10px;"><span style="display:inline-block;padding:2px 7px;border-radius:4px;background:${sevBadgeCol};color:#fff;font-weight:800;font-size:11px;">Lv ${i.sev}</span></td>
+            <td style="padding:10px;font-family:'JetBrains Mono',monospace;">${i.ppl}</td>
+            <td style="padding:10px;color:#cbd5e1;">${needStr}</td>
+            <td style="padding:10px;">${statusStr} (${assignedStr})</td>
+            <td style="padding:10px;text-align:right;">
+              <button onclick="clearAll();renderIncidentsView();" class="alt" style="padding:3px 8px;font-size:10px;">Clear</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+
+  if(pastTbody){
+    pastTbody.innerHTML = pastIncidents.map(p=>{
+      const sevCol = p.sev>=4 ? '#ef4444' : (p.sev===3 ? '#f59e0b' : '#10b981');
+      return `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+          <td style="padding:10px;font-family:'JetBrains Mono',monospace;color:#94a3b8;">${p.id}</td>
+          <td style="padding:10px;font-family:'JetBrains Mono',monospace;color:#64748b;">${p.time}</td>
+          <td style="padding:10px;font-weight:600;color:#e2e8f0;">${p.loc}</td>
+          <td style="padding:10px;">${p.type}</td>
+          <td style="padding:10px;"><span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${sevCol};color:#fff;font-weight:700;font-size:10px;">Lv ${p.sev}</span></td>
+          <td style="padding:10px;font-family:'JetBrains Mono',monospace;">${p.ppl}</td>
+          <td style="padding:10px;color:#38bdf8;font-family:'JetBrains Mono',monospace;font-weight:700;">${p.rt}</td>
+          <td style="padding:10px;color:#cbd5e1;">${p.fleet}</td>
+          <td style="padding:10px;text-align:right;"><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(16,185,129,0.15);color:#34d399;font-weight:700;font-size:10px;border:1px solid rgba(16,185,129,0.35);">✓ Resolved</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+}
+
+function renderAnalyticsView(){
+  const rt = document.getElementById('k_rt')?.textContent || '-';
+  const mrt = document.getElementById('k_mrt')?.textContent || '-';
+  const ud = document.getElementById('k_ud')?.textContent || '0%';
+  const wud = document.getElementById('k_wud')?.textContent || '0.0';
+  const cov = document.getElementById('k_cov')?.textContent || '100%';
+  const eng = document.getElementById('k_eng')?.textContent || '0';
+  const feas = document.getElementById('k_feas')?.textContent || 'Feasible';
+
+  if(document.getElementById('an_avgRt')) document.getElementById('an_avgRt').textContent = rt;
+  if(document.getElementById('an_maxRt')) document.getElementById('an_maxRt').textContent = mrt;
+  if(document.getElementById('an_unmet')) document.getElementById('an_unmet').textContent = ud;
+  if(document.getElementById('an_weightedUnmet')) document.getElementById('an_weightedUnmet').textContent = `Penalty Score: ${wud}`;
+  if(document.getElementById('an_cov')) document.getElementById('an_cov').textContent = cov;
+  if(document.getElementById('an_energy')) document.getElementById('an_energy').textContent = eng;
+  if(document.getElementById('an_feasStatus')) document.getElementById('an_feasStatus').textContent = feas.includes('Feasible') || feas.includes('Met') ? '✓ Feasible' : feas;
+
+  const totalAmb = fleet.filter(f=>f.type==="Ambulance").length || 3;
+  const busyAmb = fleet.filter(f=>f.type==="Ambulance" && (f.state==="go"||f.state==="work")).length;
+  const pctAmb = Math.round((busyAmb/totalAmb)*100);
+
+  const totalFire = fleet.filter(f=>f.type==="Fire truck").length || 2;
+  const busyFire = fleet.filter(f=>f.type==="Fire truck" && (f.state==="go"||f.state==="work")).length;
+  const pctFire = Math.round((busyFire/totalFire)*100);
+
+  const totalSec = fleet.filter(f=>f.type==="Security").length || 2;
+  const busySec = fleet.filter(f=>f.type==="Security" && (f.state==="go"||f.state==="work")).length;
+  const pctSec = Math.round((busySec/totalSec)*100);
+
+  if(document.getElementById('an_utilAmb')) document.getElementById('an_utilAmb').textContent = `${pctAmb}% (${busyAmb}/${totalAmb})`;
+  if(document.getElementById('an_barAmb')) document.getElementById('an_barAmb').style.width = `${pctAmb}%`;
+
+  if(document.getElementById('an_utilFire')) document.getElementById('an_utilFire').textContent = `${pctFire}% (${busyFire}/${totalFire})`;
+  if(document.getElementById('an_barFire')) document.getElementById('an_barFire').style.width = `${pctFire}%`;
+
+  if(document.getElementById('an_utilSec')) document.getElementById('an_utilSec').textContent = `${pctSec}% (${busySec}/${totalSec})`;
+  if(document.getElementById('an_barSec')) document.getElementById('an_barSec').style.width = `${pctSec}%`;
+  
+  if(document.getElementById('an_solverName')) document.getElementById('an_solverName').textContent = mode==='qubo'?'QUBO Solver (Simulated Annealing)':'Greedy Baseline';
+  if(document.getElementById('an_runtime')) document.getElementById('an_runtime').textContent = lastSolverStats?.runtimeMs ? `${lastSolverStats.runtimeMs.toFixed(2)} ms` : '< 1 ms';
+}
+
+function switchMainTab(viewName){
+  document.querySelectorAll('nav[aria-label="Pages"] a').forEach(a=>{
+    const v = a.dataset.view || a.textContent.trim().toLowerCase();
+    a.classList.toggle('on', v === viewName);
+  });
+
+  const views = ['overview', 'incidents', 'analytics'];
+  views.forEach(v=>{
+    const el = document.getElementById(`view_${v}`);
+    if(el) {
+      el.style.display = (v === viewName || (viewName === 'map' && v === 'overview')) ? 'block' : 'none';
+    }
+  });
+
+  if(viewName === 'incidents') renderIncidentsView();
+  if(viewName === 'analytics') renderAnalyticsView();
+  if(viewName === 'optimization') runBenchmarkComparisonBackend();
+  if(viewName === 'overview' || viewName === 'map') {
+    setTimeout(resize, 50);
+  }
+}
+
+window.switchMainTab = switchMainTab;
+window.renderIncidentsView = renderIncidentsView;
+window.renderAnalyticsView = renderAnalyticsView;
+
+document.querySelectorAll('nav[aria-label="Pages"] a').forEach(a=>{
+  a.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const v = a.dataset.view || a.textContent.trim().toLowerCase();
+    switchMainTab(v);
+  });
+});
+
+// Render initial views
+renderIncidentsView();
+renderAnalyticsView();
 
 // ── Init ─────────────────────────────────────────────────────────────────
 checkBackendHealth();
