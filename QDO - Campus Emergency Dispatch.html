@@ -228,8 +228,6 @@ const rend=new THREE.WebGLRenderer({antialias:true});rend.setPixelRatio(Math.min
 scene.add(new THREE.AmbientLight(0x94a9c9,.85));const sun=new THREE.DirectionalLight(0xffffff,.85);sun.position.set(80,200,60);scene.add(sun);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(260,260),new THREE.MeshLambertMaterial({color:0x0d1322}));ground.rotation.x=-Math.PI/2;ground.position.set(0,-.01,0);scene.add(ground);
 const grid=new THREE.GridHelper(260,26,0x1e2d4a,0x131d31);scene.add(grid);
-// football ground (campus athletic turf)
-const [fx,fz]=P(270,1050);const fb=new THREE.Mesh(new THREE.PlaneGeometry(340*S,170*S),new THREE.MeshLambertMaterial({color:0x166534}));fb.rotation.x=-Math.PI/2;fb.position.set(fx,.02,fz);scene.add(fb);
 // tactical asphalt road with pulsing electric-blue veins
 const roadMat=new THREE.MeshLambertMaterial({color:0x151c2e});
 // Blue pulsing vein shader material (organic energy wave)
