@@ -2016,9 +2016,11 @@ adminForm.addEventListener('submit', (e) => {
   const cleanInputPhone = phone.replace(/\D/g, '');
   const cleanAdminPhone = ADMIN_CREDENTIALS.phone.replace(/\D/g, '');
 
-  const isEmailMatch = email.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase();
-  const isUserMatch = username.toLowerCase() === ADMIN_CREDENTIALS.username.toLowerCase();
-  const isPhoneMatch = cleanInputPhone === cleanAdminPhone;
+  const isEmailMatch = email.toLowerCase().trim() === ADMIN_CREDENTIALS.email.toLowerCase().trim();
+  const isUserMatch = username.toLowerCase().trim() === ADMIN_CREDENTIALS.username.toLowerCase().trim();
+  const isPhoneMatch = cleanInputPhone === cleanAdminPhone || 
+                       cleanInputPhone.endsWith(cleanAdminPhone) || 
+                       (cleanInputPhone.length >= 10 && cleanInputPhone.slice(-10) === cleanAdminPhone.slice(-10));
 
   if (!isEmailMatch || !isUserMatch || !isPhoneMatch) {
     if (errBox) {
