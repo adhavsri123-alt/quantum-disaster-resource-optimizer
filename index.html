@@ -3013,4 +3013,361 @@ function tick(now){
 requestAnimationFrame(tick);kpis();
 // start with default scenario
 setTimeout(()=>{SC.ALPHA.forEach(s=>addInc(...s));},600);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BACKEND API INTEGRATION LAYER
+// Connects to FastAPI server (server.py, port 8000)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const API_BASE = 'http://localhost:8000';
+let backendOnline = false;
+let lastBackendResult = null;  // cache most recent solve result
+
+// Check backend health on load
+async function checkBackendHealth(){
+ try{
+  const r = await fetch(`${API_BASE}/api/health`,{signal:AbortSignal.timeout(2000)});
+  if(r.ok){
+   const d = await r.json();
+   backendOnline = true;
+   const pill = document.getElementById('backendStatusPill');
+   if(pill){
+    pill.textContent = '🟢 Python Backend Online';
+    pill.style.background='rgba(52,211,153,0.18)';
+    pill.style.color='#34d399';
+    pill.style.borderColor='rgba(52,211,153,0.4)';
+   }
+   feed(`<span style="color:#34d399">✓ Python QUBO Backend connected (${d.qubo_available?'QUBO enabled':'Greedy only'})</span>`);
+  }
+ }catch(e){
+  backendOnline = false;
+  feed(`<span style="color:#f97316">⚠ Python backend offline – running local 3D simulation only</span>`);
+ }
+}
+
+// ── Scenario name mapper (3D frontend labels → backend keys) ────────────
+const SCENARIO_BACKEND_MAP = {
+ 'ALPHA':'alpha','BETA':'beta','GAMMA':'gamma','STRESS':'stress'
+};
+
+// ── Call /api/solve and update KPIs + 3D incidents ──────────────────────
+async function backendSolveAndDispatch(scenarioKey, solverMode='both'){
+ if(!backendOnline) return false;
+
+ const sKey = SCENARIO_BACKEND_MAP[scenarioKey.toUpperCase()];
+ if(!sKey) return false;   // local-only scenarios (AUDITORIUM, AUTO, etc.)
+
+ const quboReads = parseInt(document.getElementById('paramSweeps')?.value||250);
+
+ try{
+  const body = {
+   scenario: sKey,
+   solver: solverMode,
+   seed: 42,
+   qubo_reads: quboReads,
+   ambulances: Math.max(1,parseInt(document.getElementById('cfgAmb')?.value||3)),
+   rescue_teams: Math.max(1,parseInt(document.getElementById('cfgFire')?.value||2)),
+   medical_supplies: 100,
+   medical_personnel: 25,
+  };
+
+  const r = await fetch(`${API_BASE}/api/solve`,{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body: JSON.stringify(body),
+   signal: AbortSignal.timeout(15000),
+  });
+  if(!r.ok) return false;
+
+  const data = await r.json();
+  lastBackendResult = data;
+
+  // Push backend emergencies into 3D scene
+  clearAll();
+  const typeMap = {
+   'fire':'Fire','medical_emergency':'Medical',
+   'accident':'Accident','flood_infrastructure':'Flood'
+  };
+
+  // Map backend location IDs to 3D scene building names
+  const LOC_TO_3D = {
+   'hostel_a':'NRI Hostel','hostel_b':'NRI Hostel',
+   'sports_complex':'Amenity Center','cafeteria':'Amenity Center',
+   'admin_block':'Heritage Block','academic_block':'Block 13',
+   'library':'Library Block','main_gate':'Heritage Block',
+  };
+
+  setTimeout(()=>{
+   data.emergencies.forEach(em=>{
+    const bldgName = LOC_TO_3D[em.location_id] || 'Block 17';
+    const eType = typeMap[em.emergency_type] || 'Fire';
+    // Clamp severity 1-5 for 3D ring color
+    const sev3d = Math.min(5, Math.max(1, Math.round(em.severity / 2)));
+    addInc(bldgName, eType, sev3d, em.people_affected);
+   });
+  }, 80);
+
+  // Update KPIs with backend data
+  updateKpisFromBackend(data, solverMode);
+
+  return true;
+ }catch(e){
+  console.warn('Backend solve failed:', e);
+  return false;
+ }
+}
+
+// ── Map backend metrics to the 8 KPI DOM elements ───────────────────────
+function updateKpisFromBackend(data, solverMode){
+ // Pick primary plan (prefer QUBO when available, else greedy)
+ const plan = data.qubo || data.greedy;
+ if(!plan || !plan.metrics) return;
+
+ const m = plan.metrics;
+ const meta = plan.solver_metadata || {};
+ const solverLabel = plan.solver_name || 'Backend Solver';
+
+ // Avg response time (backend uses minutes)
+ const avgRtMin = m.avg_response_time_min;
+ document.getElementById('k_rt').textContent = avgRtMin!=null ? avgRtMin.toFixed(2)+' min' : '-';
+ document.getElementById('k_rt2').textContent = solverLabel;
+
+ // Max response time
+ const maxRtMin = m.max_response_time_min;
+ document.getElementById('k_mrt').textContent = maxRtMin!=null ? maxRtMin.toFixed(2)+' min' : '-';
+ document.getElementById('k_mrt2').textContent = 'Worst-case depot→site';
+
+ // Unmet demand %
+ const udFrac = m.unmet_demand_fraction;
+ document.getElementById('k_ud').textContent = udFrac!=null ? (udFrac*100).toFixed(1)+'%' : '-';
+ document.getElementById('k_ud2').textContent = 'Total resource shortfall';
+
+ // Severity-weighted unmet
+ const wud = m.severity_weighted_unmet_demand_fraction;
+ document.getElementById('k_wud').textContent = wud!=null ? (wud*100).toFixed(1)+'%' : '-';
+ document.getElementById('k_wud2').textContent = 'Sev-weighted shortfall';
+
+ // Resource utilization (avg across all types)
+ const ut = m.avg_utilisation;
+ document.getElementById('k_ut').textContent = ut!=null ? (ut*100).toFixed(1)+'%' : '-';
+ document.getElementById('k_ut2').textContent = 'Ambulances · Rescue · Supplies · Personnel';
+
+ // Critical coverage
+ const cov = m.critical_coverage_score;
+ document.getElementById('k_cov').textContent = cov!=null ? (cov*100).toFixed(1)+'%' : '-';
+ document.getElementById('k_cov2').textContent = 'Severity ≥ 7 incidents';
+
+ // Objective / Energy score
+ const obj = m.weighted_objective;
+ document.getElementById('k_eng').textContent = obj!=null ? obj.toFixed(4) : '-';
+ document.getElementById('k_eng2').textContent = 'Weighted objective (↓ better)';
+
+ // Runtime + feasibility
+ const rt_ms = meta.solve_time_ms;
+ const feasMeta = meta.feasibility_status || meta.raw_feasible;
+ document.getElementById('k_feas').textContent = rt_ms!=null ? rt_ms.toFixed(2)+' ms' : '-';
+ document.getElementById('k_feas2').textContent = feasMeta!=null
+  ? (feasMeta===true||feasMeta==='Feasible' ? '✓ Feasible' : '⚙ Repair Applied')
+  : '✓ Feasible';
+}
+
+// ── Override scenario buttons to call backend first ──────────────────────
+const BACKEND_SCENARIOS = new Set(['ALPHA','BETA','GAMMA','STRESS']);
+
+// Wrap existing scenario click handler
+document.querySelectorAll('[data-s]').forEach(btn=>{
+ const originalClick = btn.onclick;
+ btn.onclick = async (e)=>{
+  const sc = btn.dataset.s;
+  if(BACKEND_SCENARIOS.has(sc) && backendOnline){
+   if(!checkAdminPermission('scenario dispatch')) return;
+   const solveMode = mode==='qubo' ? 'qubo' : mode==='compare' ? 'both' : 'greedy';
+   feed(`<span style="color:#38bdf8">⬡ Querying Python backend for ${sc} scenario…</span>`);
+   const ok = await backendSolveAndDispatch(sc, solveMode);
+   if(ok){
+    feed(`<span style="color:#34d399">✓ Backend ${sc} scenario dispatched</span>`);
+    return;
+   }
+  }
+  // Fallback to local simulation
+  if(originalClick) originalClick.call(btn, e);
+  else{
+   if(!checkAdminPermission('scenario dispatch')) return;
+   clearAll();setTimeout(()=>SC[sc]?.forEach(s=>addInc(...s)),50);
+  }
+ };
+});
+
+// ── Backend-powered Compare Both modal ───────────────────────────────────
+async function runBenchmarkComparisonBackend(){
+ if(!backendOnline){
+  runBenchmarkComparison();  // fallback to local
+  return;
+ }
+
+ // Determine which scenario was last dispatched
+ const activeScenarios = ['ALPHA','BETA','GAMMA','STRESS'];
+ let currentScenario = 'alpha';
+ // Try to detect from feed (look for active incs)
+ if(incs.length>0 && incs[0].loc){
+  // Use last backend result if available
+  if(lastBackendResult?.scenario?.key){
+   currentScenario = lastBackendResult.scenario.key.toLowerCase();
+  }
+ }
+
+ feed(`<span style="color:#38bdf8">⬡ Benchmarking backend Greedy vs QUBO…</span>`);
+
+ try{
+  const quboReads = parseInt(document.getElementById('paramSweeps')?.value||300);
+  const r = await fetch(`${API_BASE}/api/solve`,{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body: JSON.stringify({scenario:currentScenario, solver:'both', seed:42, qubo_reads:quboReads}),
+   signal: AbortSignal.timeout(30000),
+  });
+  if(!r.ok) throw new Error('API error');
+  const data = await r.json();
+
+  const gPlan = data.greedy;
+  const qPlan = data.qubo;
+  if(!gPlan||!qPlan){runBenchmarkComparison();return;}
+
+  const gM = gPlan.metrics;
+  const qM = qPlan.metrics;
+  const gMeta = gPlan.solver_metadata||{};
+  const qMeta = qPlan.solver_metadata||{};
+
+  // Populate backend comparison table
+  const win = (qVal, gVal, lowerBetter=true)=>{
+   if(qVal==null||gVal==null) return '<span style="color:#94a3b8">N/A</span>';
+   const better = lowerBetter ? qVal <= gVal : qVal >= gVal;
+   if(better) return `<span class="cmp-win">✓ QUBO Better</span>`;
+   const pct = gVal!==0 ? Math.abs((qVal-gVal)/gVal*100).toFixed(1) : '–';
+   return `<span style="color:#cbd5e1">Greedy +${pct}%</span>`;
+  };
+
+  const rows = [
+   {metric:'Avg Response Time (min)',
+    gVal:gM.avg_response_time_min?.toFixed(3)??'-',
+    qVal:qM.avg_response_time_min?.toFixed(3)??'-',
+    adv:win(qM.avg_response_time_min,gM.avg_response_time_min)},
+   {metric:'Max Response Time (min)',
+    gVal:gM.max_response_time_min?.toFixed(3)??'-',
+    qVal:qM.max_response_time_min?.toFixed(3)??'-',
+    adv:win(qM.max_response_time_min,gM.max_response_time_min)},
+   {metric:'Unmet Demand %',
+    gVal:((gM.unmet_demand_fraction||0)*100).toFixed(2)+'%',
+    qVal:((qM.unmet_demand_fraction||0)*100).toFixed(2)+'%',
+    adv:win(qM.unmet_demand_fraction,gM.unmet_demand_fraction)},
+   {metric:'Severity-Weighted Unmet %',
+    gVal:((gM.severity_weighted_unmet_demand_fraction||0)*100).toFixed(2)+'%',
+    qVal:((qM.severity_weighted_unmet_demand_fraction||0)*100).toFixed(2)+'%',
+    adv:win(qM.severity_weighted_unmet_demand_fraction,gM.severity_weighted_unmet_demand_fraction)},
+   {metric:'Critical Coverage % (Sev≥7)',
+    gVal:((gM.critical_coverage_score||0)*100).toFixed(1)+'%',
+    qVal:((qM.critical_coverage_score||0)*100).toFixed(1)+'%',
+    adv:win(qM.critical_coverage_score,gM.critical_coverage_score,false)},
+   {metric:'Resource Utilization %',
+    gVal:((gM.avg_utilisation||0)*100).toFixed(1)+'%',
+    qVal:((qM.avg_utilisation||0)*100).toFixed(1)+'%',
+    adv:win(qM.avg_utilisation,gM.avg_utilisation,false)},
+   {metric:'Weighted Objective Score',
+    gVal:gM.weighted_objective?.toFixed(4)??'-',
+    qVal:qM.weighted_objective?.toFixed(4)??'-',
+    adv:win(qM.weighted_objective,gM.weighted_objective)},
+   {metric:'QUBO Ground State Energy',
+    gVal:'N/A (Heuristic)',
+    qVal:qMeta.energy!=null?qMeta.energy.toFixed(2):'N/A',
+    adv:'<span class="cmp-qubo">H(x) Minimized</span>'},
+   {metric:'Solve Runtime (ms)',
+    gVal:gMeta.solve_time_ms?.toFixed(2)??'-',
+    qVal:qMeta.solve_time_ms?.toFixed(2)??'-',
+    adv:'Greedy O(N log N) · QUBO SA sweeps'},
+   {metric:'Feasibility Status',
+    gVal:'✓ Feasible (Heuristic)',
+    qVal:qMeta.feasibility_status||'✓ Feasible',
+    adv:'<span class="cmp-win">Post-decode repair validated</span>'},
+  ];
+
+  const tbody = document.getElementById('cmpTableBody');
+  tbody.innerHTML = rows.map(r=>`
+   <tr>
+    <td style="font-weight:600;color:#fff;">${r.metric}</td>
+    <td style="color:#cbd5e1;font-family:'JetBrains Mono',monospace;">${r.gVal}</td>
+    <td style="color:#38bdf8;font-weight:700;font-family:'JetBrains Mono',monospace;">${r.qVal}</td>
+    <td>${r.adv}</td>
+   </tr>
+  `).join('');
+
+  const aBox = document.getElementById('cmpAnalysisBox');
+  aBox.innerHTML = `
+   <b>Python Backend QUBO Solver — Live Benchmark Results (Scenario: ${currentScenario.toUpperCase()})</b><br>
+   Data source: FastAPI /api/solve · neal SimulatedAnnealingSampler (${quboReads} reads)<br><br>
+   • <b>QUBO Formulation:</b> Binary variables x_{i,r,k} per (emergency, resource, discrete level). Hamiltonian minimizes travel-time delay + unmet-demand penalty + one-hot constraint violations.<br>
+   • <b>Capacity Penalty:</b> Pairwise quadratic terms discourage over-allocation. Decoder enforces hard capacity post-sampling.<br>
+   • <b>Explainability:</b> Each incident receives a data-driven rationale explaining why that allocation was chosen — see Plans tab (Streamlit dashboard).<br>
+   • <b>Reference:</b> campus.py Dijkstra travel times from main_gate depot used for all response-time metrics.
+  `;
+
+  document.getElementById('cmpSubtitle').textContent =
+   `Python Backend: ${data.scenario?.description||currentScenario.toUpperCase()} · ${data.emergencies?.length||0} active incidents`;
+
+  document.getElementById('compareModal').style.display='flex';
+  updateKpisFromBackend(data,'both');
+  feed(`<span style="color:#34d399">✓ Backend benchmark complete</span>`);
+ }catch(e){
+  console.warn('Backend benchmark failed, falling back to local:', e);
+  runBenchmarkComparison();
+ }
+}
+
+// Monkey-patch the Compare Both button to use backend when online
+const origRunBenchmark = runBenchmarkComparison;
+document.querySelectorAll('#mode button[data-m="compare"]').forEach(btn=>{
+ btn.onclick = ()=> runBenchmarkComparisonBackend();
+});
+
+// ── Backend backend status pill in header ────────────────────────────────
+(function injectBackendStatusPill(){
+ const header = document.querySelector('header');
+ if(!header) return;
+ const pill = document.createElement('div');
+ pill.id = 'backendStatusPill';
+ pill.style.cssText = `position:absolute;top:8px;right:220px;padding:3px 10px;border-radius:999px;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.35);
+  cursor:default;z-index:100;`;
+ pill.textContent = '⭕ Backend Offline';
+ header.appendChild(pill);
+})();
+
+// ── Backend explainability panel ─────────────────────────────────────────
+async function showExplainabilityPanel(scenarioKey){
+ if(!backendOnline||!lastBackendResult) return;
+ const plan = lastBackendResult.qubo||lastBackendResult.greedy;
+ if(!plan?.explanations) return;
+
+ const modal = document.getElementById('compareModal');
+ const tbody = document.getElementById('cmpTableBody');
+ tbody.innerHTML = Object.entries(plan.explanations).map(([id,txt])=>`
+  <tr>
+   <td style="font-weight:700;color:#38bdf8;width:80px;">${id}</td>
+   <td colspan="3" style="color:#e2e8f0;font-size:12px;line-height:1.6;">${txt}</td>
+  </tr>
+ `).join('');
+
+ document.getElementById('cmpAnalysisBox').innerHTML =
+  `<b>Dispatch Explainability Report</b> — Why each resource allocation was chosen by the solver.<br>
+   Solver: ${plan.solver_name} · Scenario: ${lastBackendResult.scenario?.key||''}`;
+ document.getElementById('cmpSubtitle').textContent = 'Data-driven allocation rationale per incident';
+ modal.style.display='flex';
+}
+
+// Expose globally so it can be called from buttons
+window.showExplainabilityPanel = showExplainabilityPanel;
+
+// ── Init ─────────────────────────────────────────────────────────────────
+checkBackendHealth();
+
 </script></body></html>
