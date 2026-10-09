@@ -533,6 +533,59 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
   pointer-events: auto;
 }
 
+/* --- Presence Bar (Active Observers in Top Bar) --- */
+.presence-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+.presence-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+  animation: presencePop 0.3s cubic-bezier(0.16,1,0.3,1);
+  white-space: nowrap;
+}
+@keyframes presencePop {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.presence-pill.viewer-pres {
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #7dd3fc;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+.presence-pill.admin-pres {
+  background: rgba(249, 115, 22, 0.18);
+  border: 1px solid rgba(249, 115, 22, 0.55);
+  color: #fdba74;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.25);
+}
+.pres-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.viewer-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+  animation: pulseDot 1.6s infinite;
+}
+.admin-dot {
+  background: #f97316;
+  box-shadow: 0 0 8px #f97316;
+  animation: pulseDot 1.4s infinite;
+}
+
 /* --- Viewer Mode: Model & Hover Telemetry Only --- */
 body.mode-viewer .kpis,
 body.mode-viewer aside,
@@ -541,6 +594,9 @@ body.mode-viewer nav[aria-label="Pages"],
 body.mode-viewer #tip,
 body.mode-viewer #legend {
   display: none !important;
+}
+body.mode-viewer .presence-bar {
+  display: flex !important;
 }
 body.mode-viewer main {
   grid-template-columns: 1fr !important;
@@ -677,6 +733,17 @@ body.mode-viewer #stage {
       <span class="prof-sub" id="profSub">Student</span>
     </div>
     <button type="button" class="prof-switch-btn" id="profSwitchBtn" title="Switch User / Re-authenticate">Switch Profile</button>
+  </div>
+  <!-- Live Active Presence Bar in Top Column -->
+  <div id="presenceBar" class="presence-bar">
+    <div id="viewerPresencePill" class="presence-pill viewer-pres" style="display:none;">
+      <span class="pres-dot viewer-dot"></span>
+      <span class="pres-txt" id="viewerPresTxt">👁️ Viewer joined</span>
+    </div>
+    <div id="adminPresencePill" class="presence-pill admin-pres" style="display:none;">
+      <span class="pres-dot admin-dot"></span>
+      <span class="pres-txt" id="adminPresTxt">🛡️ Admin is also viewing</span>
+    </div>
   </div>
   <nav aria-label="Pages"><a class="on" href="#">Overview</a><a href="#">Incidents</a><a href="#">Map</a><a href="#">Optimization</a><a href="#">Analytics</a><a href="#">Reports</a><a href="#">Settings</a></nav>
 </header>
@@ -1842,6 +1909,62 @@ function switchAuthTab(mode){
 tabViewer.addEventListener('click', () => switchAuthTab('viewer'));
 tabAdmin.addEventListener('click', () => switchAuthTab('admin'));
 
+// --- Active Observers Presence Channel in Top Bar ---
+const viewerPresencePill = document.getElementById('viewerPresencePill');
+const viewerPresTxt = document.getElementById('viewerPresTxt');
+const adminPresencePill = document.getElementById('adminPresencePill');
+const adminPresTxt = document.getElementById('adminPresTxt');
+
+function broadcastPresence(role, data){
+  try {
+    const payload = { role, data, timestamp: Date.now() };
+    localStorage.setItem('qdo_pres_' + role, JSON.stringify(payload));
+    if(window.BroadcastChannel){
+      const bc = new BroadcastChannel('qdo_presence_ch');
+      bc.postMessage(payload);
+    }
+  } catch(e){}
+  updatePresenceBar();
+}
+
+function updatePresenceBar(){
+  try {
+    const vRaw = localStorage.getItem('qdo_pres_viewer');
+    const aRaw = localStorage.getItem('qdo_pres_admin');
+    
+    // Viewer presence
+    let vData = null;
+    if(vRaw){ try { vData = JSON.parse(vRaw); } catch(e){} }
+    if(currentUser && currentUser.role === 'viewer'){
+      vData = { data: currentUser, timestamp: Date.now() };
+    }
+    if(vData && vData.data){
+      viewerPresTxt.textContent = `👁️ ${vData.data.username} (${vData.data.designation || 'Viewer'}) joined viewer mode`;
+      viewerPresencePill.style.display = 'inline-flex';
+    }
+
+    // Admin presence
+    let aData = null;
+    if(aRaw){ try { aData = JSON.parse(aRaw); } catch(e){} }
+    if(currentUser && currentUser.role === 'admin'){
+      aData = { data: currentUser, timestamp: Date.now() };
+    }
+    if(aData && aData.data){
+      adminPresTxt.textContent = `🛡️ ${aData.data.username} (Admin) is also viewing`;
+      adminPresencePill.style.display = 'inline-flex';
+    }
+  } catch(e){}
+}
+
+if(window.BroadcastChannel){
+  try {
+    const bc = new BroadcastChannel('qdo_presence_ch');
+    bc.onmessage = () => updatePresenceBar();
+  } catch(e){}
+}
+window.addEventListener('storage', updatePresenceBar);
+setInterval(updatePresenceBar, 3000);
+
 function setAuthenticatedUser(user){
   currentUser = user;
   authGateModal.classList.add('hide');
@@ -1859,6 +1982,7 @@ function setAuthenticatedUser(user){
     document.body.classList.remove('mode-viewer');
     document.body.classList.add('mode-admin');
   }
+  broadcastPresence(user.role, user);
   setTimeout(resize, 60);
 }
 
