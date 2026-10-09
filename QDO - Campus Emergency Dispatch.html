@@ -126,6 +126,26 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
 .d-bar.fill-crit{background:#ef4444;box-shadow:0 0 10px rgba(239,68,68,0.85);animation:critBar .8s infinite alternate}
 @keyframes critBar{0%{opacity:.6}100%{opacity:1;filter:brightness(1.3)}}
 .msg-inc{margin-top:8px;padding:6px 9px;border-radius:6px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.35);color:#fca5a5;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
+/* --- Floating Building Location Pins (Green / Yellow / Red) --- */
+#pinsLayer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:35}
+.bldg-pin{position:absolute;transform:translate(-50%,-100%) translateY(-6px);pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:5px;padding:3px 8px 3px 6px;border-radius:999px;font-family:'Inter',system-ui,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.02em;background:rgba(9,13,22,0.88);border:1px solid rgba(255,255,255,0.15);box-shadow:0 4px 14px rgba(0,0,0,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform 0.18s cubic-bezier(0.16,1,0.3,1),box-shadow 0.18s,border-color 0.2s,opacity 0.2s;white-space:nowrap;user-select:none}
+.bldg-pin:hover{transform:translate(-50%,-100%) translateY(-9px) scale(1.1);z-index:45}
+.bldg-pin::after{content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%) rotate(45deg);width:7px;height:7px;background:rgba(9,13,22,0.95);border-right:1px solid inherit;border-bottom:1px solid inherit}
+.pin-beacon{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+/* Green: Normal / Secure / 0 incidents */
+.bldg-pin.pin-green{border-color:rgba(16,185,129,0.45);color:#d1fae5;box-shadow:0 2px 10px rgba(0,0,0,0.5),0 0 10px rgba(16,185,129,0.2)}
+.bldg-pin.pin-green::after{border-right-color:rgba(16,185,129,0.45);border-bottom-color:rgba(16,185,129,0.45)}
+.bldg-pin.pin-green .pin-beacon{background:#10b981;box-shadow:0 0 7px #10b981}
+/* Yellow: Elevated / Moderate Emergency (1-3) */
+.bldg-pin.pin-yellow{border-color:rgba(234,179,8,0.65);color:#fef9c3;box-shadow:0 2px 12px rgba(0,0,0,0.5),0 0 12px rgba(234,179,8,0.35)}
+.bldg-pin.pin-yellow::after{border-right-color:rgba(234,179,8,0.65);border-bottom-color:rgba(234,179,8,0.65)}
+.bldg-pin.pin-yellow .pin-beacon{background:#facc15;box-shadow:0 0 9px #facc15;animation:pulseBeaconYellow 1.5s infinite}
+@keyframes pulseBeaconYellow{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+/* Red: Critical / High Emergency (4-5) */
+.bldg-pin.pin-red{border-color:rgba(239,68,68,0.85);color:#fee2e2;box-shadow:0 2px 14px rgba(0,0,0,0.6),0 0 16px rgba(239,68,68,0.55);animation:pulsePinRed 1.2s infinite}
+.bldg-pin.pin-red::after{border-right-color:rgba(239,68,68,0.85);border-bottom-color:rgba(239,68,68,0.85)}
+.bldg-pin.pin-red .pin-beacon{background:#ef4444;box-shadow:0 0 12px #ef4444}
+@keyframes pulsePinRed{0%,100%{transform:translate(-50%,-100%) translateY(-6px) scale(1);box-shadow:0 2px 14px rgba(0,0,0,0.6),0 0 16px rgba(239,68,68,0.55)}50%{transform:translate(-50%,-100%) translateY(-7px) scale(1.05);box-shadow:0 4px 18px rgba(0,0,0,0.8),0 0 24px rgba(239,68,68,0.8)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style></head><body>
 <header>
@@ -142,8 +162,9 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
 </section>
 
 <main>
-<div id="stage"><div id="tip">Drag to rotate · scroll to zoom · hover building for live status · click to select</div>
+<div id="stage"><div id="tip">Drag to rotate · scroll to zoom · hover building or pin for live status · click to select</div>
 <div id="legend"><s style="background:#ef4444"></s>Incident<br><s style="background:#38bdf8"></s>Ambulance<br><s style="background:#f97316"></s>Fire truck<br><s style="background:#a78bfa"></s>Security</div>
+<div id="pinsLayer"></div>
 <!-- Animated Building Hover Message Box -->
 <div id="bldgMsgBox" class="bldg-msgbox">
  <div class="msg-hdr">
@@ -1306,21 +1327,79 @@ const mcSegments=document.getElementById('mcSegments');
 const mcInc=document.getElementById('mcInc');
 const mcIncText=document.getElementById('mcIncText');
 
-let hoveredBuilding=null,pinnedBuilding="Sagar Hospital";
+let hoveredBuilding=null;
 function getBuildingStatus(name){
  const occ=OCCUPANCY[name]||{base:300,type:"Campus Facility",icon:"🏢"};
  const active=incs.filter(i=>i.loc===name&&i.state!=="done");
  if(!active.length){
-  return {dangerLevel:0,dangerText:"Level 0 · Normal",badgeText:"SECURE",badgeClass:"safe",themeClass:"",totalPeople:occ.base,activeInc:null,type:occ.type,icon:occ.icon};
+  return {dangerLevel:0,dangerText:"Level 0 · Normal",badgeText:"SECURE",badgeClass:"safe",pinClass:"pin-green",themeClass:"",totalPeople:occ.base,activeInc:null,type:occ.type,icon:occ.icon};
  }
  const maxSev=Math.max(...active.map(i=>i.sev));
  const totalAffected=active.reduce((s,i)=>s+(i.ppl||0),0);
  const incTypes=[...new Set(active.map(i=>i.type))].join(", ");
- let badgeText="MODERATE",badgeClass="elev",themeClass="",dangerText=`Level ${maxSev} · Elevated Risk`;
- if(maxSev>=5){badgeText="CRITICAL";badgeClass="crit";themeClass="theme-crit";dangerText="Level 5 · Critical Emergency"}
- else if(maxSev===4){badgeText="HIGH";badgeClass="high";themeClass="theme-high";dangerText="Level 4 · High Hazard"}
- else if(maxSev===3){badgeText="ELEVATED";badgeClass="elev";themeClass="";dangerText="Level 3 · Elevated"}
- return {dangerLevel:maxSev,dangerText,badgeText,badgeClass,themeClass,totalPeople:occ.base,activeInc:`Active ${incTypes} · ${totalAffected} affected`,type:occ.type,icon:occ.icon};
+ let badgeText="MODERATE",badgeClass="elev",pinClass="pin-yellow",themeClass="",dangerText=`Level ${maxSev} · Elevated Risk`;
+ if(maxSev>=4){
+  badgeText=maxSev>=5?"CRITICAL":"HIGH";
+  badgeClass=maxSev>=5?"crit":"high";
+  pinClass="pin-red";
+  themeClass=maxSev>=5?"theme-crit":"theme-high";
+  dangerText=maxSev>=5?"Level 5 · Critical Emergency":"Level 4 · High Hazard";
+ }else{
+  badgeText="ELEVATED";
+  badgeClass="elev";
+  pinClass="pin-yellow";
+  dangerText=`Level ${maxSev} · Elevated`;
+ }
+ return {dangerLevel:maxSev,dangerText,badgeText,badgeClass,pinClass,themeClass,totalPeople:occ.base,activeInc:`Active ${incTypes} · ${totalAffected} affected`,type:occ.type,icon:occ.icon};
+}
+
+// Location Pins (Green = Normal, Yellow = Elevated, Red = Critical/Incident)
+const pinsLayer=document.getElementById('pinsLayer');
+const pinElements={};
+B.forEach(([n])=>{
+ const p=document.createElement('div');
+ p.className='bldg-pin pin-green';
+ const icon=(OCCUPANCY[n]&&OCCUPANCY[n].icon)?OCCUPANCY[n].icon:'📍';
+ p.innerHTML=`<span class="pin-beacon"></span><span class="pin-title">${icon} ${n}</span>`;
+ p.addEventListener('pointerenter',()=>showBldgCard(n));
+ p.addEventListener('pointerleave',()=>hideBldgCard());
+ p.addEventListener('click',(e)=>{
+  e.stopPropagation();
+  sel.value=n;
+  showBldgCard(n);
+ });
+ pinsLayer.appendChild(p);
+ pinElements[n]=p;
+});
+
+function updatePins(){
+ const w=cv.clientWidth,h=cv.clientHeight;
+ B.forEach(([n])=>{
+  const pin=pinElements[n];
+  const b=byName[n];
+  if(!pin||!b)return;
+  const st=getBuildingStatus(n);
+  pin.className='bldg-pin '+st.pinClass;
+  if(hoveredBuilding===n){
+   pin.style.opacity='0';
+   pin.style.pointerEvents='none';
+   return;
+  }
+  pin.style.opacity='1';
+  pin.style.pointerEvents='auto';
+  const wp=b.pos.clone();
+  wp.y=(b.mesh.userData.ht||5)+1.6;
+  wp.project(cam);
+  if(wp.z>1||wp.z<-1){
+   pin.style.display='none';
+  }else{
+   pin.style.display='flex';
+   const sx=(wp.x*0.5+0.5)*w;
+   const sy=(-(wp.y*0.5)+0.5)*h;
+   pin.style.left=sx+'px';
+   pin.style.top=sy+'px';
+  }
+ });
 }
 
 function showBldgCard(name){
@@ -1361,18 +1440,13 @@ function showBldgCard(name){
 }
 
 function hideBldgCard(){
- if(pinnedBuilding){
-  showBldgCard(pinnedBuilding);
-  return;
- }
  hoveredBuilding=null;
  msgBoxEl.classList.remove('visible');
 }
 
 function updateBldgCardPos(){
- const target=hoveredBuilding||pinnedBuilding;
- if(!target||!byName[target])return;
- const b=byName[target];
+ if(!hoveredBuilding||!byName[hoveredBuilding])return;
+ const b=byName[hoveredBuilding];
  const wp=b.pos.clone();
  wp.y=(b.mesh.userData.ht||5)+2.6;
  wp.project(cam);
@@ -1414,7 +1488,7 @@ function checkHover(e){
   else updateBldgCardPos();
  }else{
   cv.style.cursor="default";
-  if(hoveredBuilding&&hoveredBuilding!==pinnedBuilding)hideBldgCard();
+  if(hoveredBuilding)hideBldgCard();
  }
 }
 
@@ -1423,6 +1497,7 @@ const onPointerMove=e=>{
   th-=(e.clientX-lx)*.006;ph=Math.max(.25,Math.min(1.45,ph-(e.clientY-ly)*.005));
   moved+=Math.abs(e.clientX-lx)+Math.abs(e.clientY-ly);lx=e.clientX;ly=e.clientY;
   updateBldgCardPos();
+  updatePins();
   return;
  }
  checkHover(e);
@@ -1432,7 +1507,7 @@ cv.addEventListener('mousemove',onPointerMove);
 cv.addEventListener('pointerleave',()=>hideBldgCard());
 
 cv.addEventListener('pointerup',e=>{dragging=false;if(moved<5)pick(e)});
-cv.addEventListener('wheel',e=>{e.preventDefault();rad=Math.max(30,Math.min(300,rad+e.deltaY*.09));updateBldgCardPos()},{passive:false});
+cv.addEventListener('wheel',e=>{e.preventDefault();rad=Math.max(30,Math.min(300,rad+e.deltaY*.09));updateBldgCardPos();updatePins()},{passive:false});
 
 function pick(e){
  const r=cv.getBoundingClientRect();
@@ -1445,17 +1520,26 @@ function pick(e){
  }
  if(found){
   sel.value=found;
-  pinnedBuilding=found;
   showBldgCard(found);
   document.getElementById('tip').textContent="Selected: "+found+" · choose type and press Add incident";
+ }else{
+  hideBldgCard();
  }
 }
+
+// Clicking anywhere on screen outside pins dismisses the card
+window.addEventListener('pointerdown',(e)=>{
+ if(e.target.closest('aside')||e.target.closest('header')||e.target.closest('.kpis')||e.target.closest('#bldgMsgBox'))return;
+ if(!e.target.closest('.bldg-pin')){
+  hideBldgCard();
+ }
+});
+
 sel.addEventListener('change',()=>{
- pinnedBuilding=sel.value;
  showBldgCard(sel.value);
 });
 
-function resize(){const w=stage.clientWidth,h=stage.clientHeight;rend.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix();updateBldgCardPos()}
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;rend.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix();updateBldgCardPos();updatePins()}
 addEventListener('resize',resize);resize();upd();
 
 // loop
@@ -1469,12 +1553,13 @@ function tick(now){
   if((f.state==="go"||f.state==="return")&&f.target){const d=f.target.clone().sub(f.m.position);const l=d.length();
    if(l<.3){if(f.state==="go"){f.state="work";f.t=0}else{f.state="idle";f.target=null;assign()}}
    else{f.m.position.add(d.multiplyScalar(Math.min(1,SPEED*dt/l)));f.m.lookAt(f.target.x,.4,f.target.z)}}
-  if(f.state==="work"){f.t+=dt;f.m.position.y=.4+Math.abs(Math.sin(now/120))*.3;if(f.t>7){f.m.position.y=.4;const i=f.inc;f.state="return";f.target=f.home;f.inc=null;if(i){i.got=i.got.filter(g=>g!==f);i.fin=(i.fin||0)+1;if(i.fin>=i.need.length){i.state="done";scene.remove(i.ring);hl(i.loc,false);feed(`Resolved: ${i.type} at ${i.loc}`);const cur=hoveredBuilding||pinnedBuilding;if(cur===i.loc)showBldgCard(cur)}}kpis()}}});
+  if(f.state==="work"){f.t+=dt;f.m.position.y=.4+Math.abs(Math.sin(now/120))*.3;if(f.t>7){f.m.position.y=.4;const i=f.inc;f.state="return";f.target=f.home;f.inc=null;if(i){i.got=i.got.filter(g=>g!==f);i.fin=(i.fin||0)+1;if(i.fin>=i.need.length){i.state="done";scene.remove(i.ring);hl(i.loc,false);feed(`Resolved: ${i.type} at ${i.loc}`);if(hoveredBuilding===i.loc)showBldgCard(hoveredBuilding)}}kpis()}}});
  incs.forEach(i=>{if(i.ring){const s=1+((now/700)%1)*1.2;i.ring.scale.set(s,s,s);i.ring.material.opacity=1-((now/700)%1)}});
  upd();
  updateBldgCardPos();
+ updatePins();
  rend.render(scene,cam);requestAnimationFrame(tick)}
 requestAnimationFrame(tick);kpis();
-// start with a small default scenario so the page is alive
-setTimeout(()=>{SC.ALPHA.forEach(s=>addInc(...s));showBldgCard("Sagar Hospital");},600);
+// start with default scenario
+setTimeout(()=>{SC.ALPHA.forEach(s=>addInc(...s));},600);
 </script></body></html>
