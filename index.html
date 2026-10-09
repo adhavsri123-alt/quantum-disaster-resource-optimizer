@@ -53,9 +53,10 @@ nav a.on{background:rgba(56,189,248,0.12);color:var(--accent-cyan);border:1px so
 .kpi span{display:block;color:var(--mute);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
 .kpi b{display:block;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:24px;color:#f8fafc;letter-spacing:-0.02em}
 .kpi i{display:block;margin-top:4px;font-style:normal;font-size:11px;color:var(--accent-cyan);font-weight:500}
-main{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;padding:0 24px 24px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;padding:0 24px 24px;align-items:start}
 @media(max-width:900px){main{grid-template-columns:1fr}}
-#stage{position:relative;height:580px;border-radius:12px;overflow:hidden;background:#090d16;border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,0.45)}
+.stage-container{display:flex;flex-direction:column;gap:14px;min-width:0}
+#stage{position:relative;height:520px;border-radius:12px;overflow:hidden;background:#090d16;border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,0.45)}
 #stage canvas{display:block;width:100%;height:100%}
 #tip{position:absolute;left:14px;bottom:14px;background:rgba(9,13,22,0.9);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(10px);color:#e2e8f0;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:500;pointer-events:none}
 #legend{position:absolute;right:14px;top:14px;background:rgba(9,13,22,0.9);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(10px);color:#e2e8f0;padding:10px 14px;border-radius:8px;font-size:11px;font-weight:600;line-height:1.8}
@@ -78,10 +79,13 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
 .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#090e19}
 .seg button{flex:1;border-radius:0;background:transparent;color:var(--mute);border:none;box-shadow:none;padding:7px 10px;font-size:11px}
 .seg button.on{background:rgba(56,189,248,0.16);color:var(--accent-cyan);font-weight:700;border:1px solid rgba(56,189,248,0.4)}
-#feed{max-height:220px;overflow-y:auto;margin:0;padding:0;list-style:none}
-#feed li{padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;display:flex;align-items:center;gap:6px}
-#feed li:last-child{border:0}
-#feed li small{color:var(--subtle);font-family:'JetBrains Mono',monospace;font-size:11px}
+.feed-panel{display:flex;flex-direction:column;background:linear-gradient(180deg,#11192e 0%,#090e1a 100%);border:1px solid rgba(56,189,248,0.22);border-radius:10px;padding:14px 16px;box-shadow:0 6px 22px rgba(0,0,0,0.35);min-height:220px;max-height:270px}
+.feed-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:10px;margin-bottom:10px}
+.feed-header h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#f1f5f9;margin:0}
+#feed{flex:1;overflow-y:auto;margin:0;padding:0 6px 0 0;list-style:none;display:flex;flex-direction:column;gap:6px}
+#feed li{padding:8px 12px;border-radius:6px;background:rgba(15,23,42,0.65);border:1px solid rgba(255,255,255,0.05);font-size:12px;display:flex;align-items:center;gap:10px;transition:background .15s}
+#feed li:hover{background:rgba(30,41,59,0.85);border-color:rgba(56,189,248,0.25)}
+#feed li small{color:#64748b;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
 .sev{display:inline-block;min-width:20px;padding:1px 4px;text-align:center;border-radius:4px;background:var(--warn);color:#100702;font-weight:800;font-size:11px;margin-right:2px}
 .note{font-size:11px;color:var(--subtle);padding:0 24px 16px;line-height:1.5}
 /* --- Animated Building Message Box / HUD Tooltip --- */
@@ -589,6 +593,7 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
 /* --- Viewer Mode: Model & Hover Telemetry Only --- */
 body.mode-viewer .kpis,
 body.mode-viewer aside,
+body.mode-viewer .feed-panel,
 body.mode-viewer .note,
 body.mode-viewer nav[aria-label="Pages"],
 body.mode-viewer #tip,
@@ -871,6 +876,7 @@ body.mode-viewer #stage {
 </section>
 
 <main>
+<div class="stage-container">
 <div id="stage"><div id="tip">Drag to rotate · scroll to zoom · hover building or pin for live status · click to select</div>
 <div id="legend"><s style="background:#ef4444"></s>Incident<br><s style="background:#38bdf8"></s>Ambulance<br><s style="background:#f97316"></s>Fire truck<br><s style="background:#a78bfa"></s>Security</div>
 <div id="pinsLayer"></div>
@@ -889,6 +895,22 @@ body.mode-viewer #stage {
   <div class="d-segs" id="mcSegments"><div class="d-bar fill-safe"></div><div class="d-bar"></div><div class="d-bar"></div><div class="d-bar"></div><div class="d-bar"></div></div>
  </div>
  <div class="msg-inc" id="mcInc" style="display:none"><span>⚠️</span><span id="mcIncText">Active Fire</span></div>
+</div>
+</div>
+
+<!-- Command Center Live Feed (Filling center-bottom viewport) -->
+<div class="card feed-panel">
+  <div class="feed-header">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#38bdf8;box-shadow:0 0 10px #38bdf8;animation:pulseBeaconYellow 1.5s infinite;"></span>
+      <h2>Live Dispatch Operations &amp; Mission Event Feed</h2>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:11px;color:#94a3b8;font-family:'JetBrains Mono',monospace;">STREAM ACTIVE</span>
+      <button id="clearFeedBtn" class="alt" style="padding:3px 8px;font-size:10px;">Clear Log</button>
+    </div>
+  </div>
+  <ul id="feed"></ul>
 </div>
 </div>
 <aside>
@@ -968,8 +990,6 @@ body.mode-viewer #stage {
   </div>
 </details>
 </div>
-
-<div class="card"><h2>Live feed</h2><ul id="feed"></ul></div>
 </aside></main>
 <p class="note">Prototype with demo data. Incident intake is a manual form for now; the optimizer only needs an Emergency object, so sensor feeds can replace it later. The QUBO toggle uses a placeholder joint optimizer until Stage 3 connects the Python backend.</p>
 
@@ -2684,6 +2704,8 @@ document.getElementById('clr').onclick=()=>{
   if(!checkAdminPermission('incident clearing')) return;
   clearAll();
 };
+const clrFeed=document.getElementById('clearFeedBtn');
+if(clrFeed) clrFeed.onclick=()=>{document.getElementById('feed').innerHTML='';};
 function clearAll(){simulationActive=false;incs.forEach(i=>{scene.remove(i.ring);hl(i.loc,false)});incs=[];fleet.forEach(f=>{f.state="return";f.inc=null;f.target=f.home;f.rt=null});if(typeof updateLivePaths==='function')updateLivePaths();kpis()}
 const SC={
  ALPHA:[["Block 17","Fire",4,40],["Block 13","Medical",3,6],["Heritage Block","Accident",2,4],["Automobile Block","Accident",3,15],["Library Block","Medical",4,45],["Sagar Hospital","Medical",5,60],["Electronics Block","Fire",4,50],["Block 22","Medical",3,20]],
