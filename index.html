@@ -147,10 +147,499 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
 .bldg-pin.pin-red .pin-beacon{background:#ef4444;box-shadow:0 0 12px #ef4444}
 @keyframes pulsePinRed{0%,100%{transform:translate(-50%,-100%) translateY(-6px) scale(1);box-shadow:0 2px 14px rgba(0,0,0,0.6),0 0 16px rgba(239,68,68,0.55)}50%{transform:translate(-50%,-100%) translateY(-7px) scale(1.05);box-shadow:0 4px 18px rgba(0,0,0,0.8),0 0 24px rgba(239,68,68,0.8)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* --- Access Authentication Gateway Modal --- */
+.auth-gate-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 10, 18, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  padding: 20px;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.35s ease;
+}
+.auth-gate-modal.hide {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  background: linear-gradient(180deg, #131c31 0%, #0f172a 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(56, 189, 248, 0.2);
+  padding: 28px 30px;
+  position: relative;
+  overflow: hidden;
+  animation: authCardIn 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes authCardIn {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0284c7, #38bdf8, #818cf8);
+}
+.auth-header {
+  margin-bottom: 22px;
+}
+.auth-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.auth-brand-badge {
+  background: linear-gradient(135deg, #0284c7, #38bdf8);
+  color: #031326;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 5px;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+.auth-sys-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: 0.06em;
+}
+.auth-sys-dot {
+  width: 6px;
+  height: 6px;
+  background: #38bdf8;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #38bdf8;
+  animation: pulseDot 1.8s infinite;
+}
+.auth-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+.auth-sub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+/* Tabs */
+.auth-tabs {
+  display: flex;
+  background: #090e19;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+.auth-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 7px;
+  background: transparent;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.auth-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  transform: none;
+}
+.auth-tab.on {
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.2);
+}
+.auth-tab .tab-icon {
+  font-size: 14px;
+}
+/* Forms */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.auth-field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+.auth-field label .req {
+  color: #38bdf8;
+  margin-left: 2px;
+}
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 13px;
+  color: #64748b;
+  pointer-events: none;
+  user-select: none;
+}
+.input-wrap input,
+.input-wrap select {
+  width: 100%;
+  background: #090e19;
+  color: #f1f5f9;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 10px 12px 10px 36px;
+  font-family: inherit;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+.input-wrap select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11.5l-5-5h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+.input-wrap select option {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+.input-wrap input:focus,
+.input-wrap select:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.22);
+}
+.input-wrap input::placeholder {
+  color: #475569;
+}
+.auth-notice {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  margin-top: 2px;
+}
+.auth-notice.viewer-notice {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  color: #93c5fd;
+}
+.auth-notice.admin-notice {
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  color: #fdba74;
+}
+.auth-notice span {
+  font-size: 15px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.auth-notice p {
+  margin: 0;
+}
+.auth-notice strong {
+  color: #fff;
+}
+.auth-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-top: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.auth-submit-btn .btn-arrow {
+  font-size: 15px;
+  transition: transform 0.2s ease;
+}
+.auth-submit-btn:hover .btn-arrow {
+  transform: translateX(4px);
+}
+.auth-submit-btn.viewer-btn {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.4);
+}
+.auth-submit-btn.viewer-btn:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5);
+}
+.auth-submit-btn.admin-btn {
+  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.4);
+}
+.auth-submit-btn.admin-btn:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+  box-shadow: 0 6px 22px rgba(56, 189, 248, 0.55);
+}
+/* User Status in Header */
+.auth-profile-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(19, 28, 49, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin-left: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.prof-role-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.prof-role-badge.viewer {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+.prof-role-badge.admin {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.45);
+}
+.prof-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.prof-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.prof-sub {
+  font-size: 10px;
+  color: #94a3b8;
+}
+.prof-switch-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: none;
+}
+.prof-switch-btn:hover {
+  background: rgba(56, 189, 248, 0.16);
+  color: #fff;
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: none;
+}
+/* Toast Notification for Viewer Mode restrictions */
+.auth-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.8), 0 0 20px rgba(239, 68, 68, 0.25);
+  backdrop-filter: blur(12px);
+  color: #fee2e2;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 100000;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auth-toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
 </style></head><body>
+
+<!-- Access Authentication Gateway Modal -->
+<div id="authGateModal" class="auth-gate-modal">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-badge-row">
+        <span class="auth-brand-badge">QDO SECURITY GATEWAY</span>
+        <span class="auth-sys-status"><span class="auth-sys-dot"></span>CAMPUS DISPATCH PROTOCOL</span>
+      </div>
+      <h2 class="auth-title">Dayananda Sagar Emergency Command</h2>
+      <p class="auth-sub">Please authenticate your campus identity before entering the real-time dispatch dashboard.</p>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="auth-tabs">
+      <button type="button" class="auth-tab on" id="tabViewer" data-mode="viewer">
+        <span class="tab-icon">👁️</span>
+        <span class="tab-txt">Sign In as Viewer</span>
+      </button>
+      <button type="button" class="auth-tab" id="tabAdmin" data-mode="admin">
+        <span class="tab-icon">🛡️</span>
+        <span class="tab-txt">Sign In as Admin</span>
+      </button>
+    </div>
+
+    <!-- Viewer Form -->
+    <form id="viewerForm" class="auth-form active">
+      <div class="auth-field">
+        <label for="vEmail">Institutional Email <span class="req">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">✉️</span>
+          <input type="email" id="vEmail" required placeholder="user@dayanandasagar.edu" autocomplete="email">
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <label for="vUsername">Full Name / Username <span class="req">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input type="text" id="vUsername" required placeholder="e.g. Adhav Sri" autocomplete="name">
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <label for="vDesignation">Campus Designation <span class="req">*</span></label>
+        <div class="input-wrap select-wrap">
+          <span class="input-icon">🏷️</span>
+          <select id="vDesignation" required>
+            <option value="" disabled selected>Select your designation...</option>
+            <option value="Student">Student</option>
+            <option value="Teacher">Teacher / Faculty</option>
+            <option value="Principal">Principal</option>
+            <option value="Vice Principal">Vice Principal</option>
+            <option value="Fire Manager">Fire Safety Manager</option>
+            <option value="Ambulance Manager">Ambulance / Medical Manager</option>
+            <option value="Campus Security">Campus Security Officer</option>
+            <option value="Facility Manager">Facility & Operations Manager</option>
+            <option value="Department Head">Department Head / HOD</option>
+            <option value="Staff / Visitor">Staff / Administration</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="auth-notice viewer-notice">
+        <span>ℹ️</span>
+        <p><strong>Viewer Clearance:</strong> Grants visual telemetry, building risk monitoring, and live emergency notifications.</p>
+      </div>
+
+      <button type="submit" class="auth-submit-btn viewer-btn" id="btnViewerSubmit">
+        <span>Enter Dispatch Center (Viewer)</span>
+        <span class="btn-arrow">→</span>
+      </button>
+    </form>
+
+    <!-- Admin Form -->
+    <form id="adminForm" class="auth-form" style="display:none;">
+      <div class="auth-field">
+        <label for="aEmail">Admin Command Email <span class="req">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">✉️</span>
+          <input type="email" id="aEmail" required placeholder="admin.dispatch@dayanandasagar.edu" autocomplete="email">
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <label for="aUsername">Admin Username / Callsign <span class="req">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🛡️</span>
+          <input type="text" id="aUsername" required placeholder="e.g. Commander Chauhan" autocomplete="name">
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <label for="aPhone">Emergency Contact Phone Number <span class="req">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">📞</span>
+          <input type="tel" id="aPhone" required placeholder="+91 98765 43210" autocomplete="tel">
+        </div>
+      </div>
+
+      <div class="auth-notice admin-notice">
+        <span>⚡</span>
+        <p><strong>Admin Clearance:</strong> Full authority to declare emergencies, dispatch fire/medical units, and run quantum QUBO optimization algorithms.</p>
+      </div>
+
+      <button type="submit" class="auth-submit-btn admin-btn" id="btnAdminSubmit">
+        <span>Authorize & Enter Console (Admin)</span>
+        <span class="btn-arrow">→</span>
+      </button>
+    </form>
+  </div>
+</div>
+
 <header>
   <h1><span class="brand-badge">QDO</span> QUANTUM DISPATCH <small>Emergency Operations Center · Dayananda Sagar Campus</small></h1>
   <span class="live-pill"><span class="live-dot"></span>GRID ONLINE</span>
+  <div id="authProfilePill" class="auth-profile-pill" style="display:none;">
+    <span class="prof-role-badge" id="profRoleBadge">VIEWER</span>
+    <div class="prof-meta">
+      <span class="prof-name" id="profName">User</span>
+      <span class="prof-sub" id="profSub">Student</span>
+    </div>
+    <button type="button" class="prof-switch-btn" id="profSwitchBtn" title="Switch User / Re-authenticate">Switch Profile</button>
+  </div>
   <nav aria-label="Pages"><a class="on" href="#">Overview</a><a href="#">Incidents</a><a href="#">Map</a><a href="#">Optimization</a><a href="#">Analytics</a><a href="#">Reports</a><a href="#">Settings</a></nav>
 </header>
 
@@ -1285,17 +1774,133 @@ function kpis(){
  document.getElementById('k_ut2').textContent=`${busy} of ${fleet.length} units busy`;
  document.getElementById('k_ai2').textContent=`${incs.filter(i=>i.state==="done").length} resolved`}
 
+// --- Authentication & Role Access Gateway ---
+let currentUser = null; // { role: 'viewer'|'admin', email: '', username: '', designation: '', phone: '' }
+
+const authGateModal = document.getElementById('authGateModal');
+const tabViewer = document.getElementById('tabViewer');
+const tabAdmin = document.getElementById('tabAdmin');
+const viewerForm = document.getElementById('viewerForm');
+const adminForm = document.getElementById('adminForm');
+const authProfilePill = document.getElementById('authProfilePill');
+const profRoleBadge = document.getElementById('profRoleBadge');
+const profName = document.getElementById('profName');
+const profSub = document.getElementById('profSub');
+const profSwitchBtn = document.getElementById('profSwitchBtn');
+
+function switchAuthTab(mode){
+  if(mode === 'viewer'){
+    tabViewer.classList.add('on');
+    tabAdmin.classList.remove('on');
+    viewerForm.style.display = 'flex';
+    adminForm.style.display = 'none';
+  } else {
+    tabAdmin.classList.add('on');
+    tabViewer.classList.remove('on');
+    adminForm.style.display = 'flex';
+    viewerForm.style.display = 'none';
+  }
+}
+tabViewer.addEventListener('click', () => switchAuthTab('viewer'));
+tabAdmin.addEventListener('click', () => switchAuthTab('admin'));
+
+function setAuthenticatedUser(user){
+  currentUser = user;
+  authGateModal.classList.add('hide');
+  authProfilePill.style.display = 'inline-flex';
+  profRoleBadge.className = 'prof-role-badge ' + user.role;
+  profRoleBadge.textContent = user.role.toUpperCase();
+  profName.textContent = user.username;
+  profSub.textContent = user.role === 'admin' ? ('📞 ' + user.phone) : ('🏷️ ' + user.designation);
+  feed(`Authenticated as <b>${user.role.toUpperCase()}</b>: ${user.username} (${user.role === 'admin' ? 'Hotline: ' + user.phone : user.designation})`);
+}
+
+viewerForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const email = document.getElementById('vEmail').value.trim();
+  const username = document.getElementById('vUsername').value.trim();
+  const designation = document.getElementById('vDesignation').value;
+  if(!email || !username || !designation) return;
+  setAuthenticatedUser({
+    role: 'viewer',
+    email,
+    username,
+    designation
+  });
+});
+
+adminForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const email = document.getElementById('aEmail').value.trim();
+  const username = document.getElementById('aUsername').value.trim();
+  const phone = document.getElementById('aPhone').value.trim();
+  if(!email || !username || !phone) return;
+  setAuthenticatedUser({
+    role: 'admin',
+    email,
+    username,
+    phone
+  });
+});
+
+profSwitchBtn.addEventListener('click', () => {
+  authGateModal.classList.remove('hide');
+  if(currentUser && currentUser.role === 'admin') {
+    switchAuthTab('admin');
+  } else {
+    switchAuthTab('viewer');
+  }
+});
+
+// Toast notification for Viewer Mode restriction
+function showAuthToast(msg){
+  let t = document.getElementById('authToast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'authToast';
+    t.className = 'auth-toast';
+    document.body.appendChild(t);
+  }
+  t.innerHTML = `<span>⚠️</span> ${msg}`;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3400);
+}
+
+function checkAdminPermission(actionName){
+  if(!currentUser || currentUser.role !== 'admin'){
+    showAuthToast(`Viewer Read-Only: Only signed-in Admins can trigger ${actionName}. Click 'Switch Profile' in header to log in as Admin.`);
+    return false;
+  }
+  return true;
+}
+
 // controls
 const sev=document.getElementById('sev');sev.oninput=()=>document.getElementById('sv').textContent=sev.value;
-document.getElementById('add').onclick=()=>addInc(sel.value,document.getElementById('typ').value,+sev.value,+document.getElementById('ppl').value||1);
+document.getElementById('add').onclick=()=>{
+  if(!checkAdminPermission('new incidents')) return;
+  addInc(sel.value,document.getElementById('typ').value,+sev.value,+document.getElementById('ppl').value||1);
+};
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
-document.getElementById('rnd').onclick=()=>addInc(rnd(B)[0],rnd(Object.keys(NEED)),1+Math.floor(Math.random()*5),5+Math.floor(Math.random()*80));
-document.getElementById('clr').onclick=clearAll;
+document.getElementById('rnd').onclick=()=>{
+  if(!checkAdminPermission('random incidents')) return;
+  addInc(rnd(B)[0],rnd(Object.keys(NEED)),1+Math.floor(Math.random()*5),5+Math.floor(Math.random()*80));
+};
+document.getElementById('clr').onclick=()=>{
+  if(!checkAdminPermission('incident clearing')) return;
+  clearAll();
+};
 function clearAll(){incs.forEach(i=>{scene.remove(i.ring);hl(i.loc,false)});incs=[];fleet.forEach(f=>{f.state="return";f.inc=null;f.target=f.home;f.rt=null});kpis()}
 const SC={ALPHA:[["Block 17","Fire",4,40],["Block 13","Medical",3,6],["Heritage Block","Accident",2,4],["Automobile Block","Accident",3,15],["Library Block","Medical",4,45],["Sagar Hospital","Medical",5,60],["Electronics Block","Fire",4,50],["Block 22","Medical",3,20]],BETA:[["Block 17","Flood",4,60],["Block 13","Medical",3,12],["NRI Hostel","Fire",4,35],["Heritage Block","Accident",2,5],["Auditorium","Medical",4,50],["Automobile Block","Fire",4,45],["Management Block","Fire",4,60],["Sagar Hospital","Accident",5,40],["Electronics Block","Medical",4,35],["Block 22","Fire",4,40]],GAMMA:[["Block 17","Accident",5,120],["Block 13","Medical",5,30],["Block 13","Fire",4,50],["Heritage Block","Medical",4,15],["NRI Hostel","Accident",3,10],["Auditorium","Fire",5,150],["Automobile Block","Flood",3,25],["Library Block","Fire",5,90],["Management Block","Medical",4,35],["Sagar Hospital","Medical",5,100],["Amenity Center","Fire",4,55],["Electronics Block","Fire",5,80],["Block 22","Accident",4,45]],AUDITORIUM:[["Auditorium","Fire",5,160],["Auditorium","Medical",4,40],["Block 17","Accident",3,15]],AUTO:[["Automobile Block","Fire",5,60],["Automobile Block","Medical",4,30],["Block 13","Accident",3,12]],LIBRARY:[["Library Block","Fire",4,80],["Library Block","Medical",4,45],["Management Block","Accident",3,10]],MGMT:[["Management Block","Fire",5,70],["Management Block","Medical",4,35],["Library Block","Accident",3,12]],HOSPITAL:[["Sagar Hospital","Medical",5,90],["Sagar Hospital","Accident",4,40],["Block 17","Medical",3,15]],AMENITY:[["Amenity Center","Fire",4,65],["Amenity Center","Medical",4,35],["Sagar Hospital","Medical",3,15]],ELECTRONICS:[["Electronics Block","Fire",5,95],["Electronics Block","Medical",4,40],["Heritage Block","Accident",3,12]],BLOCK22:[["Block 22","Medical",5,80],["Block 22","Fire",4,35],["Block 17","Accident",2,10]]};
-document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{clearAll();setTimeout(()=>SC[b.dataset.s].forEach(s=>addInc(...s)),50)});
-document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#mode button').forEach(x=>x.classList.remove('on'));b.classList.add('on');mode=b.dataset.m;
- fleet.forEach(f=>{if(f.state==="go"){f.state="return";f.target=f.home;f.inc=null}});incs.forEach(i=>i.got=[]);assign()});
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{
+  if(!checkAdminPermission('scenario dispatch')) return;
+  clearAll();setTimeout(()=>SC[b.dataset.s].forEach(s=>addInc(...s)),50);
+});
+document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{
+  if(!checkAdminPermission('optimizer algorithm change')) return;
+  document.querySelectorAll('#mode button').forEach(x=>x.classList.remove('on'));b.classList.add('on');mode=b.dataset.m;
+  fleet.forEach(f=>{if(f.state==="go"){f.state="return";f.target=f.home;f.inc=null}});incs.forEach(i=>i.got=[]);assign();
+});
 
 // Occupancy data & real-time building statistics
 const OCCUPANCY={
