@@ -1,0 +1,25 @@
+{
+  "name": "qdo-campus-dispatch",
+  "version": "1.0.0",
+  "description": "Quantum Disaster Resource Optimizer - Dayananda Sagar campus emergency dispatch simulation",
+  "main": "index.html",
+  "scripts": {
+    "dev": "live-server --entry-file=\"QDO - Campus Emergency Dispatch.html\" --port=3000 --open=\"/QDO - Campus Emergency Dispatch.html\"",
+    "start": "live-server --entry-file=\"QDO - Campus Emergency Dispatch.html\" --port=3000 --open=\"/QDO - Campus Emergency Dispatch.html\"",
+    "serve": "serve . -p 3000",
+    "python-serve": "python -m http.server 3000"
+  },
+  "keywords": [
+    "threejs",
+    "dispatch-system",
+    "emergency-response",
+    "simulation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "serve": "^14.2.4",
+    "three": "^0.128.0"
+  }
+}

@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QDO - Campus Emergency Dispatch</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef0ee;--panel:#fff;--ink:#14201c;--mute:#5d6b66;--line:#d5dbd8;--accent:#0f766e;--warn:#c2410c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1513;--panel:#16201d;--ink:#e6efeb;--mute:#8da39b;--line:#26332f;--accent:#2dd4bf;--warn:#fb923c}}
+:root[data-theme="dark"]{--bg:#0e1513;--panel:#16201d;--ink:#e6efeb;--mute:#8da39b;--line:#26332f;--accent:#2dd4bf;--warn:#fb923c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,sans-serif;font-size:14px}
+header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+h1{font:600 20px Georgia,serif;margin:0}h1 small{font:400 12px "Segoe UI",sans-serif;color:var(--mute);margin-left:8px}
+nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto}nav a{padding:6px 12px;border-radius:6px;color:var(--mute);text-decoration:none;white-space:nowrap}
+nav a.on{background:var(--accent);color:#04201c}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:12px 20px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.kpi b{display:block;font:600 24px Georgia,serif}.kpi span{color:var(--mute);font-size:12px}.kpi i{font-style:normal;font-size:12px;color:var(--accent)}
+main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px;padding:0 20px 20px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+#stage{position:relative;height:560px;border-radius:10px;overflow:hidden;background:#0b1210;border:1px solid var(--line)}
+#stage canvas{display:block;width:100%;height:100%}
+#tip{position:absolute;left:12px;bottom:12px;background:rgba(10,18,16,.85);color:#e6efeb;padding:6px 10px;border-radius:6px;font-size:12px;pointer-events:none}
+#legend{position:absolute;right:12px;top:12px;background:rgba(10,18,16,.85);color:#e6efeb;padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.7}
+#legend s{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;text-decoration:none}
+aside{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+.card h2{font:600 14px "Segoe UI",sans-serif;margin:0 0 8px}
+label{display:block;font-size:12px;color:var(--mute);margin:6px 0 2px}
+select,input[type=range],input[type=number]{width:100%}
+select,input[type=number]{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px}
+button{background:var(--accent);color:#04201c;border:0;border-radius:6px;padding:8px 12px;font-weight:600;cursor:pointer}
+button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}.seg button{flex:1;border-radius:0;background:transparent;color:var(--mute)}.seg button.on{background:var(--accent);color:#04201c}
+#feed{max-height:210px;overflow:auto;margin:0;padding:0;list-style:none}
+#feed li{padding:6px 0;border-bottom:1px solid var(--line);font-size:12px}#feed li:last-child{border:0}
+.sev{display:inline-block;min-width:18px;text-align:center;border-radius:4px;background:var(--warn);color:#1b0a02;font-weight:700;margin-right:6px}
+.note{font-size:11px;color:var(--mute);padding:0 20px 14px}
+/* --- Animated Building Message Box / HUD Tooltip --- */
+.bldg-msgbox{position:absolute;pointer-events:none;z-index:90;min-width:260px;max-width:320px;background:rgba(10,20,18,0.92);border:1px solid rgba(45,212,191,0.45);box-shadow:0 14px 34px rgba(0,0,0,0.7),0 0 25px rgba(45,212,191,0.22);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:12px;padding:13px 15px;color:#e6efeb;transform:translate(-50%,-100%) translateY(-14px);opacity:0;visibility:hidden;transition:opacity .2s cubic-bezier(0.16,1,0.3,1),transform .2s cubic-bezier(0.16,1,0.3,1),visibility .2s}
+.bldg-msgbox.visible{opacity:1;visibility:visible;animation:msgBoxPop .28s cubic-bezier(0.16,1,0.3,1) forwards}
+@keyframes msgBoxPop{0%{opacity:0;transform:translate(-50%,-100%) translateY(4px) scale(0.92)}60%{opacity:1;transform:translate(-50%,-100%) translateY(-18px) scale(1.02)}100%{opacity:1;transform:translate(-50%,-100%) translateY(-14px) scale(1)}}
+.bldg-msgbox::after{content:'';position:absolute;bottom:-7px;left:50%;transform:translateX(-50%) rotate(45deg);width:13px;height:13px;background:rgba(10,20,18,0.95);border-right:1px solid rgba(45,212,191,0.45);border-bottom:1px solid rgba(45,212,191,0.45);transition:border-color .25s}
+.bldg-msgbox.flipped{transform:translate(-50%,14px)}
+.bldg-msgbox.flipped.visible{animation:msgBoxPopDown .28s cubic-bezier(0.16,1,0.3,1) forwards}
+@keyframes msgBoxPopDown{0%{opacity:0;transform:translate(-50%,-4px) scale(0.92)}60%{opacity:1;transform:translate(-50%,18px) scale(1.02)}100%{opacity:1;transform:translate(-50%,14px) scale(1)}}
+.bldg-msgbox.flipped::after{top:-7px;bottom:auto;border-right:none;border-bottom:none;border-left:1px solid rgba(45,212,191,0.45);border-top:1px solid rgba(45,212,191,0.45)}
+.bldg-msgbox.flipped.theme-crit::after{border-left-color:rgba(239,68,68,0.75);border-top-color:rgba(239,68,68,0.75)}
+.bldg-msgbox.flipped.theme-high::after{border-left-color:rgba(249,115,22,0.65);border-top-color:rgba(249,115,22,0.65)}
+.bldg-msgbox.theme-crit{border-color:rgba(239,68,68,0.75);box-shadow:0 14px 34px rgba(0,0,0,0.8),0 0 28px rgba(239,68,68,0.35)}
+.bldg-msgbox.theme-crit::after{border-right-color:rgba(239,68,68,0.75);border-bottom-color:rgba(239,68,68,0.75)}
+.bldg-msgbox.theme-high{border-color:rgba(249,115,22,0.65);box-shadow:0 14px 34px rgba(0,0,0,0.8),0 0 22px rgba(249,115,22,0.28)}
+.bldg-msgbox.theme-high::after{border-right-color:rgba(249,115,22,0.65);border-bottom-color:rgba(249,115,22,0.65)}
+.msg-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.msg-tw{display:flex;align-items:center;gap:8px}
+.msg-icon{font-size:20px;line-height:1}
+.msg-nm{font:700 15px Georgia,serif;color:#fff;line-height:1.2}
+.msg-sub{font-size:11px;color:#8da39b}
+.msg-bdg{font-size:10px;font-weight:800;letter-spacing:.6px;padding:3px 8px;border-radius:999px;text-transform:uppercase}
+.msg-bdg.safe{background:rgba(16,185,129,0.18);color:#34d399;border:1px solid rgba(52,211,153,0.4)}
+.msg-bdg.elev{background:rgba(234,179,8,0.2);color:#facc15;border:1px solid rgba(250,204,21,0.4)}
+.msg-bdg.high{background:rgba(249,115,22,0.22);color:#fb923c;border:1px solid rgba(251,146,60,0.45)}
+.msg-bdg.crit{background:rgba(239,68,68,0.25);color:#f87171;border:1px solid rgba(248,113,113,0.65);animation:critPulse 1.1s infinite}
+@keyframes critPulse{0%,100%{opacity:1;box-shadow:0 0 8px rgba(239,68,68,0.5)}50%{opacity:.7;box-shadow:0 0 2px rgba(239,68,68,0.1)}}
+.msg-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}
+.msg-stat{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:7px 9px}
+.msg-lbl{display:block;font-size:9px;font-weight:700;letter-spacing:.6px;color:#8da39b;margin-bottom:2px}
+.msg-val{font-size:11px;font-weight:600;color:#f1f5f9}
+.msg-val .v-num{font-size:16px;font-weight:700;color:#38bdf8}
+.msg-val small{font-size:10px;color:#94a3b8;display:block;margin-top:-2px}
+.d-wrap{margin-top:4px}
+.d-lbl{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:#8da39b;margin-bottom:4px}
+.d-segs{display:flex;gap:4px;height:6px}
+.d-bar{flex:1;background:rgba(255,255,255,0.12);border-radius:3px;transition:background .25s,box-shadow .25s}
+.d-bar.fill-safe{background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.6)}
+.d-bar.fill-elev{background:#eab308;box-shadow:0 0 6px rgba(234,179,8,0.6)}
+.d-bar.fill-high{background:#f97316;box-shadow:0 0 8px rgba(249,115,22,0.7)}
+.d-bar.fill-crit{background:#ef4444;box-shadow:0 0 10px rgba(239,68,68,0.85);animation:critBar .8s infinite alternate}
+@keyframes critBar{0%{opacity:.6}100%{opacity:1;filter:brightness(1.3)}}
+.msg-inc{margin-top:8px;padding:6px 9px;border-radius:6px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.35);color:#fca5a5;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style></head><body>
+<header><h1>QDO<small>Quantum Disaster Resource Optimizer · Dayananda Sagar campus</small></h1>
+<nav aria-label="Pages"><a class="on" href="#">Overview</a><a href="#">Incidents</a><a href="#">Map</a><a href="#">Optimization</a><a href="#">Analytics</a><a href="#">Reports</a><a href="#">Settings</a></nav></header>
+
+<section class="kpis">
+<div class="kpi"><span>Avg response time</span><b id="k_rt">-</b><i id="k_rt2">&nbsp;</i></div>
+<div class="kpi"><span>Unmet demand</span><b id="k_ud">-</b><i id="k_ud2">&nbsp;</i></div>
+<div class="kpi"><span>Resource utilization</span><b id="k_ut">-</b><i id="k_ut2">&nbsp;</i></div>
+<div class="kpi"><span>Active incidents</span><b id="k_ai">0</b><i id="k_ai2">&nbsp;</i></div>
+</section>
+
+<main>
+<div id="stage"><div id="tip">Drag to rotate · scroll to zoom · hover building for live status · click to select</div>
+<div id="legend"><s style="background:#ef4444"></s>Incident<br><s style="background:#38bdf8"></s>Ambulance<br><s style="background:#f97316"></s>Fire truck<br><s style="background:#a78bfa"></s>Security</div>
+<!-- Animated Building Hover Message Box -->
+<div id="bldgMsgBox" class="bldg-msgbox">
+ <div class="msg-hdr">
+  <div class="msg-tw"><span class="msg-icon" id="mcIcon">🏛️</span><div><div class="msg-nm" id="mcName">Block 17</div><div class="msg-sub" id="mcType">Architecture &amp; Design</div></div></div>
+  <span class="msg-bdg safe" id="mcBadge">SECURE</span>
+ </div>
+ <div class="msg-grid">
+  <div class="msg-stat"><span class="msg-lbl">TOTAL OCCUPANCY</span><div class="msg-val"><span class="v-num" id="mcPeople">380</span><small>people present</small></div></div>
+  <div class="msg-stat"><span class="msg-lbl">THREAT STATUS</span><div class="msg-val" id="mcThreat">Normal · Low Risk</div></div>
+ </div>
+ <div class="d-wrap">
+  <div class="d-lbl"><span>DANGER LEVEL</span><span id="mcDangerScore">0 / 5</span></div>
+  <div class="d-segs" id="mcSegments"><div class="d-bar fill-safe"></div><div class="d-bar"></div><div class="d-bar"></div><div class="d-bar"></div><div class="d-bar"></div></div>
+ </div>
+ <div class="msg-inc" id="mcInc" style="display:none"><span>⚠️</span><span id="mcIncText">Active Fire</span></div>
+</div>
+</div>
+<aside>
+<div class="card"><h2>Report incident</h2>
+<label>Location (click map or choose)</label><select id="loc"></select>
+<label>Type</label><select id="typ"><option>Fire</option><option>Medical</option><option>Accident</option><option>Flood</option></select>
+<label>Severity: <span id="sv">3</span></label><input id="sev" type="range" min="1" max="5" value="3">
+<label>People affected</label><input id="ppl" type="number" value="10" min="1">
+<div class="row"><button id="add">Add incident</button><button class="alt" id="rnd">Random</button></div></div>
+
+<div class="card"><h2>Optimizer</h2>
+<div class="seg" id="mode"><button class="on" data-m="greedy">Conventional greedy</button><button data-m="qubo">QUBO</button></div>
+<div class="row"><button class="alt" data-s="ALPHA">ALPHA</button><button class="alt" data-s="BETA">BETA</button><button class="alt" data-s="GAMMA">GAMMA</button><button class="alt" data-s="AUDITORIUM">AUDITORIUM</button><button class="alt" data-s="AUTO">AUTO</button><button class="alt" data-s="LIBRARY">LIBRARY</button><button class="alt" data-s="MGMT">MGMT</button><button class="alt" data-s="HOSPITAL">HOSPITAL</button><button class="alt" data-s="AMENITY">AMENITY</button><button class="alt" id="clr">Clear</button></div></div>
+
+<div class="card"><h2>Live feed</h2><ul id="feed"></ul></div>
+</aside></main>
+<p class="note">Prototype with demo data. Incident intake is a manual form for now; the optimizer only needs an Emergency object, so sensor feeds can replace it later. The QUBO toggle uses a placeholder joint optimizer until Stage 3 connects the Python backend.</p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// name, px x, px y, w, h (from key map), building height
+//  name               px    py    w    h    ht   ← sits exactly at a road intersection
+const B=[
+  ["Sagar Hospital",    600,  170, 300, 170, 5.8],  // spine  × row A (north hub)
+  ["Block 17",          150,  520, 140, 220,   5],  // left col  × row B
+  ["Auditorium",       1050,  520, 220, 160, 4.6],  // right col × row B
+  ["Automobile Block", -120,  770, 210, 170,   5],  // far-left  × row C
+  ["Amenity Center",    600,  770, 230, 170,   5],  // spine     × row C (centre hub)
+  ["Heritage Block",   1260,  770, 290,  80, 4.2],  // far-right × row C
+  ["Block 13",          150, 1180, 270,  90,   4],  // left col  × row D
+  ["Library Block",     600, 1180, 200, 155,   5],  // spine     × row D
+  ["Management Block", 1050, 1180, 175, 155, 5.2],  // right col × row D
+  ["NRI Hostel",        600, 1530, 270,  80, 6.5],  // spine  × row F (south hub)
+];
+const S=1/10,P=(x,y)=>[(x-600)*S,(y-800)*S];
+const BASES=[["Ambulance","Medical bay",0x38bdf8],["Ambulance","Medical bay",0x38bdf8],["Ambulance","Medical bay",0x38bdf8],["Fire truck","Fire station",0xf97316],["Fire truck","Fire station",0xf97316],["Security","Security post",0xa78bfa],["Security","Security post",0xa78bfa]];
+const NEED={Fire:["Fire truck","Ambulance"],Medical:["Ambulance"],Accident:["Ambulance","Security"],Flood:["Fire truck","Security"]};
+const SPEED=14; // scene units per sim second
+
+const stage=document.getElementById('stage');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1210);scene.fog=new THREE.Fog(0x0b1210,130,360);
+const cam=new THREE.PerspectiveCamera(50,1,.1,2000);
+const rend=new THREE.WebGLRenderer({antialias:true});rend.setPixelRatio(Math.min(devicePixelRatio,2));stage.appendChild(rend.domElement);
+scene.add(new THREE.AmbientLight(0x8fb5a8,.7));const sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(80,200,60);scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(260,260),new THREE.MeshLambertMaterial({color:0x14301f}));ground.rotation.x=-Math.PI/2;ground.position.set(0,-.01,0);scene.add(ground);
+const grid=new THREE.GridHelper(260,26,0x1f3a30,0x1a2f27);scene.add(grid);
+// football ground
+const [fx,fz]=P(270,1050);const fb=new THREE.Mesh(new THREE.PlaneGeometry(340*S,170*S),new THREE.MeshLambertMaterial({color:0x1f7a3a}));fb.rotation.x=-Math.PI/2;fb.position.set(fx,.02,fz);scene.add(fb);
+// main road ring with pulsing electric-blue veins
+const roadMat=new THREE.MeshLambertMaterial({color:0x1a2622});
+// Blue pulsing vein shader material (organic energy wave)
+const roadVeinMat=new THREE.ShaderMaterial({
+ uniforms:{time:{value:0}},
+ vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+ fragmentShader:`uniform float time;varying vec2 vUv;
+ void main(){
+  float yDist=abs(vUv.y-0.5)*2.0;
+  float veinCore=smoothstep(0.18,0.0,yDist);
+  float veinGlow=smoothstep(0.70,0.0,yDist)*0.55;
+  float microVeins=smoothstep(0.09,0.0,abs(yDist-0.54))*0.45;
+  float wave1=sin(vUv.x*3.2-time*4.2)*0.5+0.5;
+  float wave2=sin(vUv.x*1.4-time*2.2+1.5)*0.5+0.5;
+  float fastPulse=pow(sin(vUv.x*6.0-time*7.5)*0.5+0.5,5.0)*1.3;
+  float pulse=pow(wave1,3.2)*0.85+pow(wave2,3.5)*0.5+fastPulse;
+  float beat=0.82+0.28*sin(time*3.6);
+  vec3 deepBlue=vec3(0.03,0.48,0.98);
+  vec3 brightCyan=vec3(0.0,0.92,1.0);
+  vec3 coreWhite=vec3(0.8,0.97,1.0);
+  float intensity=(veinCore*(0.95+pulse*1.4)+veinGlow*(0.52+pulse*0.6)+microVeins*(0.65+pulse*0.75))*beat;
+  vec3 col=mix(deepBlue,brightCyan,clamp(pulse*0.85,0.0,1.0));
+  col=mix(col,coreWhite,veinCore*(0.45+pulse*0.55));
+  col*=intensity*1.65;
+  float alpha=clamp(intensity*1.2,0.0,0.96);
+  gl_FragColor=vec4(col,alpha);
+ }`,
+ transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
+});
+// Road width helper with glowing vein overlay
+const road=(x1,y1,x2,y2,w=2.2)=>{
+ const a=P(x1,y1),b=P(x2,y2),l=Math.hypot(b[0]-a[0],b[1]-a[1]);
+ const rotZ=-Math.atan2(b[1]-a[1],b[0]-a[0]),midX=(a[0]+b[0])/2,midZ=(a[1]+b[1])/2;
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(l,w),roadMat);
+ m.rotation.x=-Math.PI/2;m.rotation.z=rotZ;m.position.set(midX,0.028,midZ);scene.add(m);
+ const vg=new THREE.PlaneGeometry(l,w*0.85);
+ const uvs=vg.attributes.uv;
+ for(let i=0;i<uvs.count;i++){uvs.setX(i,uvs.getX(i)*(l/4.8))}
+ uvs.needsUpdate=true;
+ const vm=new THREE.Mesh(vg,roadVeinMat);
+ vm.rotation.x=-Math.PI/2;vm.rotation.z=rotZ;vm.position.set(midX,0.042,midZ);scene.add(vm);
+};
+
+// ════════════════════════════════════════════════════════
+// CAMPUS ROAD NETWORK  (S=1/3)
+//   spine      x=600   full N-S
+//   row A      y=170   Hospital
+//   row B      y=520   Block17 / Auditorium
+//   row C      y=770   Automobile / Amenity(hub) / Heritage
+//   row D      y=1180  Block13 / Library(hub) / Management
+//   row F      y=1530  NRI Hostel
+//   left col   x=150
+//   right col  x=1050
+//   far-left   x=-120
+//   far-right  x=1260
+// ════════════════════════════════════════════════════════
+
+// ── SPINE (full N-S backbone) ─────────────────────────
+road(600, 170, 600, 1530);
+
+// ── ROW A – Hospital frontage ─────────────────────────
+road(420, 170, 780, 170);
+
+// ── ROW B – full E-W (far-left to far-right) ─────────
+road(-120, 520, 1260, 520);
+// Block17 and Auditorium north spurs to their buildings
+road(150, 420, 150, 520);
+road(1050, 420, 1050, 520);
+
+// ── Far-left col (row B → row C) ─────────────────────
+road(-120, 520, -120, 770);
+
+// ── Left col (row B → row D) ─────────────────────────
+road(150, 520, 150, 1180);
+
+// ── Right col (row B → row D) ────────────────────────
+road(1050, 520, 1050, 1180);
+
+// ── Far-right col (row B → row C) ────────────────────
+road(1260, 520, 1260, 770);
+
+// ── ROW C – full E-W ─────────────────────────────────
+road(-120, 770, 1260, 770);
+
+// ── ROW D – left col to right col ────────────────────
+road(150, 1180, 1050, 1180);
+
+// ── ROW F – NRI frontage ──────────────────────────────
+road(430, 1530, 770, 1530);
+
+// ---- curved glass block (modelled from photo) ----
+const GLASS="Block 17";
+function glassTex(cols,tint){const c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');
+ const gr=g.createLinearGradient(0,0,0,128);gr.addColorStop(0,tint[0]);gr.addColorStop(1,tint[1]);g.fillStyle=gr;g.fillRect(0,0,256,128);
+ g.fillStyle='rgba(255,255,255,.18)';for(let i=0;i<5;i++)g.fillRect(i*52+10,0,18,128);
+ g.strokeStyle='rgba(20,40,60,.75)';g.lineWidth=3;for(let i=0;i<=cols;i++){const x=i*256/cols;g.beginPath();g.moveTo(x,0);g.lineTo(x,128);g.stroke()}
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t}
+function buildGlassBlock(){
+ const G=new THREE.Group(),mW=new THREE.MeshStandardMaterial({color:0xf2f2ee,roughness:.6}),mG=new THREE.MeshStandardMaterial({color:0x8a949b,roughness:.7});
+ const R=16,F=6,fh=2.6,sl=.55,a0=-Math.PI*.8,al=Math.PI*1.6;
+ const gt=glassTex(1,['#6fb4e6','#2b6aa8']);gt.repeat.set(26,1);
+ const mGl=new THREE.MeshStandardMaterial({map:gt,metalness:.55,roughness:.15,side:THREE.DoubleSide});
+ for(let f=0;f<F;f++){const y=f*fh;
+  const gl=new THREE.Mesh(new THREE.CylinderGeometry(R,R,fh-sl,40,1,true,a0,al),mGl);gl.position.y=y+sl+(fh-sl)/2;G.add(gl);
+  const bd=new THREE.Mesh(new THREE.CylinderGeometry(R+.35,R+.35,sl,40,1,false,a0,al),mW);bd.position.y=y+sl/2;G.add(bd)}
+ const rf=new THREE.Mesh(new THREE.CylinderGeometry(R+.6,R+.6,.7,40,1,false,a0,al),mW);rf.position.y=F*fh+.35;G.add(rf);
+ [a0,a0+al].forEach(t=>{const w=new THREE.Mesh(new THREE.BoxGeometry(R*1.25,F*fh+.7,2),mG);w.position.set(Math.sin(t)*R*.75,(F*fh+.7)/2,Math.cos(t)*R*.75);w.rotation.y=-t;G.add(w)});
+ const bk=new THREE.Mesh(new THREE.BoxGeometry(R*1.9,F*fh+.7,R*.7),mG);bk.position.set(0,(F*fh+.7)/2,-R*.55);G.add(bk);
+ const tH=F*fh+3,tW=7.5,tD=5,tt=glassTex(4,['#456b85','#1e3a4f']);tt.repeat.set(1,tH/2.4);
+ const tw=new THREE.Mesh(new THREE.BoxGeometry(tW,tH,tD),new THREE.MeshStandardMaterial({map:tt,metalness:.6,roughness:.2}));tw.position.set(0,tH/2,R-1.2);G.add(tw);
+ [-tW/2,tW/2].forEach(x=>{const c=new THREE.Mesh(new THREE.BoxGeometry(.6,tH,tD+.3),mW);c.position.set(x,tH/2,R-1.2);G.add(c)});
+ const sh=new THREE.Shape();sh.moveTo(-tW/2-.3,0);sh.lineTo(tW/2+.3,0);sh.lineTo(0,3.4);sh.closePath();
+ const pk=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:tD+.3,bevelEnabled:false}),mG);pk.position.set(0,tH,R-1.2-tD/2-.15);G.add(pk);
+ const cn=new THREE.Mesh(new THREE.BoxGeometry(tW+3,.35,3.2),mW);cn.position.set(0,3.4,R+1.6);G.add(cn);
+ return G}
+function brickTex(base,line,rw,rh){const c=document.createElement('canvas');c.width=128;c.height=128;const g=c.getContext('2d');g.fillStyle=base;g.fillRect(0,0,128,128);g.strokeStyle=line;g.lineWidth=2;
+ for(let y=0;y<128;y+=rh){g.beginPath();g.moveTo(0,y);g.lineTo(128,y);g.stroke();const off=(y/rh)%2?rw/2:0;for(let x=-off;x<128;x+=rw){g.beginPath();g.moveTo(x,y);g.lineTo(x,y+rh);g.stroke()}}
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t}
+function buildMech(){
+ const G=new THREE.Group(),H=9.6;
+ const bm=(base,rx,ry)=>{const t=brickTex(base,'rgba(60,30,20,.45)',16,10);t.repeat.set(rx,ry);return new THREE.MeshStandardMaterial({map:t,roughness:.9})};
+ const red=bm('#b8613f',4,3),tan=bm('#c9a874',3,3),cream=new THREE.MeshStandardMaterial({color:0xe3d3b0,roughness:.8}),dark=new THREE.MeshStandardMaterial({color:0x2a2420,roughness:.9});
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ // left wing: recessed balcony bays between brick piers
+ add(new THREE.BoxGeometry(14,H,.4),dark,-5,H/2,-2.3);
+ for(let f=1;f<=3;f++)add(new THREE.BoxGeometry(14,.4,5),cream,-5,f*3.1,0);
+ for(let i=0;i<5;i++)add(new THREE.BoxGeometry(1.3,H,5),tan,-11.65+i*3.3,H/2,0);
+ for(let f=0;f<3;f++)for(let i=0;i<4;i++){const x=-10+i*3.3+.0;add(new THREE.BoxGeometry(2.6,.7,.1),new THREE.MeshStandardMaterial({color:0x555b60,metalness:.5}),x+.2,f*3.1+3.1*0+.5+.4+0,2.3)}
+ // right wing: solid red brick block with round windows
+ add(new THREE.BoxGeometry(10,H,7),red,7,H/2,.5);
+ add(new THREE.BoxGeometry(10.4,.5,7.4),cream,7,H+.25,.5);
+ add(new THREE.BoxGeometry(10.2,.35,7.2),cream,7,3.3,.5);
+ [4.4,7.4].forEach(y=>{
+  const ring=add(new THREE.TorusGeometry(1.45,.34,10,36),cream,8.2,y,4.05);
+  add(new THREE.CircleGeometry(1.25,32),new THREE.MeshStandardMaterial({color:0x14333a,metalness:.6,roughness:.2}),8.2,y,3.98)});
+ // sign
+ const c=document.createElement('canvas');c.width=512;c.height=96;const g=c.getContext('2d');g.fillStyle='#f4f4f0';g.fillRect(0,0,512,96);g.fillStyle='#123';g.font='bold 30px sans-serif';g.textAlign='center';g.fillText('DEPARTMENT OF',256,38);g.fillText('MECHANICAL ENGINEERING',256,76);
+ add(new THREE.PlaneGeometry(5.2,.98),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c)}),5.6,5.9,4.03);
+ // ground-floor entrance
+ add(new THREE.BoxGeometry(3.6,2.6,.2),dark,8.4,1.3,4.02);
+ add(new THREE.BoxGeometry(3.8,.3,1.4),cream,8.4,2.9,4.6);
+ return G}
+function buildHeritage(){
+ const G=new THREE.Group();
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d),M=c=>new THREE.MeshStandardMaterial({color:c,roughness:.9});
+ const ct=brickTex('#efdca0','rgba(120,100,50,.22)',32,14);ct.repeat.set(3,3);
+ const cream=new THREE.MeshStandardMaterial({map:ct,roughness:.9}),cr=M(0xefdca0),blue=M(0x7fb2e0),rail=M(0x3a6fb0),brown=M(0x6b3a26),roofB=M(0x9fcdf0),dark=M(0x3a2f22),teal=M(0x3aa6a8);
+ const jc=document.createElement('canvas');jc.width=jc.height=64;const g=jc.getContext('2d');g.fillStyle='#3f86c2';g.fillRect(0,0,64,64);g.fillStyle='#c4e4f8';for(let x=0;x<8;x++)for(let y=0;y<8;y++)g.fillRect(x*8+2,y*8+2,4,4);
+ const jali=new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(jc),roughness:.6});
+ // left tall block with brown shuttered windows
+ add(bx(7,13.4,9),cream,-16.5,6.7,0);add(bx(7.2,3.2,9.2),blue,-16.5,1.6,0);
+ for(let f=0;f<3;f++){add(bx(1.7,2,.15),brown,-16.5,5.3+f*3.1,4.55);add(bx(2.3,.3,.6),cr,-16.5,6.6+f*3.1,4.7)}
+ // long wing: blue base, open balcony floors, piers with pinnacles
+ add(bx(21,3.2,7.4),blue,-2.5,1.6,0);
+ for(let i=0;i<7;i++)add(bx(2,2.1,.1),dark,-10.9+i*3,1.3,3.72);
+ add(bx(21,9.6,.4),cr,-2.5,8,-3.2);
+ for(let k=0;k<4;k++)add(bx(21,.45,7.4),cr,-2.5,3.4+k*3.2,0);
+ for(let i=0;i<8;i++){const x=-12.4+i*3;add(bx(1.1,9.6,7.4),cr,x,8,0);add(new THREE.ConeGeometry(.35,.9,4),roofB,x,13.3,0)}
+ for(let f=0;f<3;f++)for(let i=0;i<7;i++){const x=-10.9+i*3;add(bx(1.9,.9,.1),rail,x,4.05+f*3.2,3.6);add(bx(1.2,1.4,.1),brown,x,4.8+f*3.2,-2.98)}
+ // tower with blue jali screens and pyramid roof
+ add(bx(8,14.6,8),cream,12,7.3,0);add(bx(8.2,3.2,8.2),blue,12,1.6,0);
+ [5.4,8.6,11.8].forEach(y=>add(new THREE.PlaneGeometry(2.6,2.6),jali,13.2,y,4.02));
+ add(bx(2.4,1.9,.12),dark,9.8,5.2,4.02);add(bx(2.4,1.9,.12),dark,9.8,8.4,4.02);
+ add(bx(8.6,.5,8.6),roofB,12,14.85,0);
+ const roof=add(new THREE.ConeGeometry(5.6,3,4),roofB,12,16.6,0);roof.rotation.y=Math.PI/4;
+ add(bx(9,.35,4),teal,12,3.6,5.8);add(bx(4,2.6,.12),dark,12,1.3,4.06);
+ for(let k=0;k<4;k++)add(bx(8,.25*(4-k),.8),cr,12,.125*(4-k),4.6+k*.8);
+ return G}
+function buildNRI(){
+ const G=new THREE.Group(),bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d),M=c=>new THREE.MeshStandardMaterial({color:c,roughness:.85});
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const wall=M(0xeceae4),band=M(0xd3d0c8),dark=M(0x2b2824),tan=M(0xc9b48a);
+ const W=45,D=12,F=7,gh=3.6,fh=3.1,H=gh+F*fh;
+ add(bx(W,H,D),wall,0,H/2,0);
+ for(let f=0;f<=F;f++)add(bx(W+.3,.25,D+.3),band,0,gh+f*fh,0);
+ // ground-floor arcade
+ add(bx(W-1,gh-.4,.3),dark,0,gh/2,D/2+.05);
+ for(let i=0;i<=10;i++)add(bx(.7,gh,.7),tan,-22+i*4.4,gh/2,D/2+.5);
+ add(bx(W+.4,.35,1.4),band,0,gh,D/2+.4);
+ // window grid
+ const win=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.15,1.35),new THREE.MeshStandardMaterial({color:0x2a4fd6,roughness:.3,metalness:.3}),F*18),m4=new THREE.Matrix4();let n=0;
+ for(let f=0;f<F;f++)for(let i=0;i<18;i++){m4.setPosition(-19.55+i*2.3,gh+1.55+f*fh,D/2+.04);win.setMatrixAt(n++,m4)}
+ G.add(win);
+ // penthouse
+ add(bx(10,3.2,7),wall,-8,H+1.6,0);add(bx(10.3,.3,7.3),band,-8,H+3.3,0);
+ for(let i=0;i<4;i++)add(new THREE.PlaneGeometry(1.2,1.2),new THREE.MeshStandardMaterial({color:0x2a4fd6}),-11+i*2,H+1.7,3.52);
+ // entrance portico and steps
+ add(bx(7,.4,3.2),band,0,3.9,D/2+1.9);add(bx(3.4,2.8,.15),dark,0,1.4,D/2+.25);
+ for(let k=0;k<3;k++)add(bx(7,.2*(3-k),.7),band,0,.1*(3-k),D/2+.9+k*.7);
+ // name plate
+ const c=document.createElement('canvas');c.width=256;c.height=64;const g=c.getContext('2d');g.fillStyle='#1d4fb8';g.fillRect(0,0,256,64);g.fillStyle='#fff';g.font='bold 34px sans-serif';g.textAlign='center';g.fillText('NRI HOSTEL',128,44);
+ add(new THREE.PlaneGeometry(5.5,1.4),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c)}),-17.5,gh+1.2,D/2+.06);
+ return G}
+function buildAuditorium(){
+ const G=new THREE.Group();
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+
+ // 1. Monolith Granite Pylon with DSCE Logo and Silver Lettering (modelled directly from photo)
+ const sc=document.createElement('canvas');sc.width=512;sc.height=512;const sg=sc.getContext('2d');
+ sg.fillStyle='#131718';sg.fillRect(0,0,512,512);
+ for(let i=0;i<2600;i++){const v=Math.floor(Math.random()*45+20);sg.fillStyle=`rgba(${v+10},${v+25},${v+25},.25)`;sg.fillRect(Math.random()*512,Math.random()*512,2,2)}
+ for(let x=100;x<280;x+=16){const gr=sg.createLinearGradient(x,40,x,320);gr.addColorStop(0,'rgba(255,255,255,.05)');gr.addColorStop(.5,'rgba(255,255,255,.16)');gr.addColorStop(1,'rgba(255,255,255,.02)');sg.fillStyle=gr;sg.fillRect(x,40,8+Math.random()*6,280)}
+ sg.beginPath();sg.arc(256,110,44,0,Math.PI*2);sg.fillStyle='#ffffff';sg.fill();sg.strokeStyle='#0284c7';sg.lineWidth=4;sg.stroke();
+ sg.beginPath();sg.arc(256,110,38,0,Math.PI*2);sg.fillStyle='#0284c7';sg.fill();
+ sg.fillStyle='#ffffff';sg.beginPath();sg.moveTo(256,88);sg.lineTo(276,102);sg.lineTo(276,122);sg.lineTo(256,134);sg.lineTo(236,122);sg.lineTo(236,102);sg.closePath();sg.fill();
+ sg.fillStyle='#0369a1';sg.font='bold 11px sans-serif';sg.textAlign='center';sg.fillText('DSCE',256,114);
+ sg.fillStyle='#f8fafc';sg.shadowColor='rgba(0,0,0,.85)';sg.shadowBlur=6;sg.shadowOffsetY=2;
+ sg.font='bold 23px "Segoe UI",sans-serif';sg.fillText('DR. D. PREMACHANDRA SAGAR',256,200);
+ sg.font='bold 29px Georgia,serif';sg.fillText('AUDITORIUM',256,244);
+ sg.font='600 22px Georgia,serif';sg.fillText('&',256,280);
+ sg.font='bold 21px "Segoe UI",sans-serif';sg.fillText('CENTRE FOR PERFORMING ARTS',256,322);
+ const signTex=new THREE.CanvasTexture(sc);
+
+ // 2. Spider-glass curtain wall texture
+ const gc=document.createElement('canvas');gc.width=128;gc.height=128;const gg=gc.getContext('2d');
+ gg.fillStyle='rgba(140,210,235,.28)';gg.fillRect(0,0,128,128);
+ gg.strokeStyle='rgba(25,50,70,.65)';gg.lineWidth=2;gg.strokeRect(0,0,128,128);
+ [0,128].forEach(x=>{[0,128].forEach(y=>{
+  gg.fillStyle='#d1d5db';gg.beginPath();gg.arc(x,y,4,0,Math.PI*2);gg.fill();
+  gg.strokeStyle='#9ca3af';gg.lineWidth=2;gg.beginPath();gg.moveTo(x-8,y);gg.lineTo(x+8,y);gg.moveTo(x,y-8);gg.lineTo(x,y+8);gg.stroke();
+ })});
+ const glassTex=new THREE.CanvasTexture(gc);glassTex.wrapS=glassTex.wrapT=THREE.RepeatWrapping;glassTex.repeat.set(6,2.5);
+
+ // 3. Canopy soffit panels with spotlights
+ const oc=document.createElement('canvas');oc.width=64;oc.height=64;const og=oc.getContext('2d');
+ og.fillStyle='#e5e7eb';og.fillRect(0,0,64,64);og.strokeStyle='#cbd5e1';og.lineWidth=1.5;og.strokeRect(0,0,64,64);
+ og.fillStyle='#fef08a';og.beginPath();og.arc(32,32,7,0,Math.PI*2);og.fill();
+ const soffitTex=new THREE.CanvasTexture(oc);soffitTex.wrapS=soffitTex.wrapT=THREE.RepeatWrapping;soffitTex.repeat.set(10,4);
+
+ // Materials
+ const mPylon=new THREE.MeshStandardMaterial({color:0x1b1f20,roughness:.35,metalness:.45});
+ const mSign=new THREE.MeshStandardMaterial({map:signTex,roughness:.4,metalness:.2});
+ const mGlass=new THREE.MeshStandardMaterial({map:glassTex,color:0xa5f3fc,metalness:.4,roughness:.1,transparent:true,opacity:.6,side:THREE.DoubleSide});
+ const mSoffit=new THREE.MeshStandardMaterial({map:soffitTex,roughness:.6});
+ const mHall=new THREE.MeshStandardMaterial({color:0x222a2e,roughness:.75});
+ const mHallBand=new THREE.MeshStandardMaterial({color:0x334155,roughness:.7});
+ const mSteel=new THREE.MeshStandardMaterial({color:0xe2e8f0,metalness:.8,roughness:.2});
+ const mPillar=new THREE.MeshStandardMaterial({color:0xf1f5f9,roughness:.4});
+ const mPlinth=new THREE.MeshStandardMaterial({color:0x2d3436,roughness:.9});
+ const mWater=new THREE.MeshStandardMaterial({color:0x0284c7,metalness:.7,roughness:.1,transparent:true,opacity:.85});
+ const mPot=new THREE.MeshStandardMaterial({color:0x9a3412,roughness:.8});
+ const mPlant=new THREE.MeshStandardMaterial({color:0x15803d,roughness:.7});
+ const mDoor=new THREE.MeshStandardMaterial({color:0x3e2723,roughness:.6});
+
+ // Base plinth
+ add(bx(38,.5,26),mPlinth,0,.25,0);
+ add(bx(36,.3,24),mPlinth,0,.55,0);
+
+ // Main auditorium hall volume (rear)
+ const HW=28,HH=11,HD=14;
+ add(bx(HW,HH,HD),mHall,1.5,HH/2+.7,-3.5);
+ add(bx(18,3.5,10),mHallBand,1.5,HH+2.45,-4.5);
+ for(let f=1;f<=3;f++)add(bx(HW+.3,.25,HD+.3),mHallBand,1.5,f*3+.7,-3.5);
+
+ // Grand glass curtain wall (front and side lobby)
+ const GW=24,GH=10;
+ add(bx(GW,GH,.15),mGlass,3.5,GH/2+.7,3.6);
+ add(bx(.15,GH,7.2),mGlass,15.5,GH/2+.7,0);
+
+ // White interior structural columns
+ for(let i=0;i<5;i++){
+  const px=-6+i*5;
+  add(new THREE.CylinderGeometry(.32,.32,GH,16),mPillar,px,GH/2+.7,3.1);
+ }
+ // Mezzanine balcony inside foyer
+ add(bx(GW-.5,.35,4.5),mHallBand,3.5,5.2,1.3);
+ add(bx(GW-.5,.8,.1),mSteel,3.5,5.8,3.3);
+ for(let d=0;d<3;d++)add(bx(3,4.2,.2),mDoor,-2+d*6,2.8,3.4);
+
+ // Projecting roof canopy with downlights soffit
+ const CW=28,CD=11,CH=.6,canopyY=GH+.7+CH/2;
+ add(bx(CW,CH,CD),mPylon,3.5,canopyY,1.8);
+ const soffit=add(bx(CW-.2,.1,CD-.2),mSoffit,3.5,canopyY-CH/2-.05,1.8);
+ soffit.rotation.x=Math.PI;
+ add(bx(CW+.4,.4,.5),mSteel,3.5,canopyY+.2,1.8+CD/2);
+
+ // Angular monolith pylon with Premachandra Sagar signage
+ const PW=7.5,PH=13.5,PD=2.2,PX=-10.5,PZ=4.2;
+ const pylon=add(bx(PW,PH,PD),mPylon,PX,PH/2+.7,PZ);
+ pylon.rotation.z=-0.04;
+ const pCap=add(bx(PW+.4,.35,PD+.4),mSteel,PX,PH+.8,PZ);
+ pCap.rotation.z=-0.04;
+ const pSign=add(new THREE.PlaneGeometry(PW-.4,PH-2),mSign,PX+.25,PH/2+.6,PZ+PD/2+.04);
+ pSign.rotation.z=-0.04;
+
+ // Fountain water basin in front of pylon
+ const BW=PW+2,BD=3.8,BY=.4;
+ add(bx(BW,.45,.35),mPylon,PX,BY,PZ+PD/2+BD);
+ add(bx(BW,.45,.35),mPylon,PX,BY,PZ+PD/2);
+ add(bx(.35,.45,BD),mPylon,PX-BW/2,BY,PZ+PD/2+BD/2);
+ add(bx(.35,.45,BD),mPylon,PX+BW/2,BY,PZ+PD/2+BD/2);
+ add(bx(BW-.5,.1,BD-.5),mWater,PX,BY+.12,PZ+PD/2+BD/2);
+
+ // Potted plants lining basin and plaza
+ for(let p=0;p<10;p++){
+  const potX=PX-3.8+p*.85;
+  add(new THREE.CylinderGeometry(.22,.15,.4,8),mPot,potX,.7,PZ+PD/2+BD+.35);
+  add(new THREE.DodecahedronGeometry(.26,1),mPlant,potX,1.05,PZ+PD/2+BD+.35);
+ }
+ // Feature potted tree in foreground
+ add(new THREE.CylinderGeometry(.45,.3,.65,10),mPot,PX-2.5,.8,PZ+PD/2+BD+1.8);
+ add(new THREE.DodecahedronGeometry(.65,1),mPlant,PX-2.5,1.55,PZ+PD/2+BD+1.8);
+ add(new THREE.DodecahedronGeometry(.45,1),mPlant,PX-2.5,2.1,PZ+PD/2+BD+1.8);
+
+ return G;
+}
+function buildAuto(){
+ const G=new THREE.Group();
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+
+ // 1. Canted Front Glass Facade Texture with Yellow DSCE Logo & Cyan Text (modelled from photo)
+ const fc=document.createElement('canvas');fc.width=512;fc.height=512;const fg=fc.getContext('2d');
+ const fgr=fg.createLinearGradient(0,0,512,512);fgr.addColorStop(0,'#10222a');fgr.addColorStop(.5,'#1d3844');fgr.addColorStop(1,'#0d1d22');
+ fg.fillStyle=fgr;fg.fillRect(0,0,512,512);
+ fg.strokeStyle='rgba(255,255,255,.24)';fg.lineWidth=3;
+ for(let x=0;x<=512;x+=64){fg.beginPath();fg.moveTo(x,0);fg.lineTo(x,512);fg.stroke()}
+ for(let y=0;y<=512;y+=64){fg.beginPath();fg.moveTo(0,y);fg.lineTo(512,y);fg.stroke()}
+ // Yellow DSCE circular emblem badge on upper left
+ const cx=130,cy=195,r=68;
+ fg.beginPath();fg.arc(cx,cy,r,0,Math.PI*2);fg.fillStyle='#facc15';fg.fill();fg.strokeStyle='#ca8a04';fg.lineWidth=4;fg.stroke();
+ fg.beginPath();fg.arc(cx,cy,r-8,0,Math.PI*2);fg.fillStyle='#0284c7';fg.fill();
+ fg.beginPath();fg.moveTo(cx,cy-34);fg.lineTo(cx+28,cy-14);fg.lineTo(cx+28,cy+18);fg.lineTo(cx,cy+35);fg.lineTo(cx-28,cy+18);fg.lineTo(cx-28,cy-14);fg.closePath();
+ fg.fillStyle='#38bdf8';fg.fill();fg.strokeStyle='#ffffff';fg.lineWidth=3;fg.stroke();
+ fg.fillStyle='#facc15';fg.beginPath();fg.arc(cx,cy-10,8,0,Math.PI*2);fg.fill();
+ fg.font='bold 9px sans-serif';fg.fillStyle='#082f49';fg.textAlign='center';fg.fillText('DSCE',cx,cy+17);
+ // Cyan / Sky Blue text to the right
+ fg.textAlign='left';fg.fillStyle='#38bdf8';fg.shadowColor='rgba(0,0,0,.9)';fg.shadowBlur=8;
+ fg.font='bold 35px "Segoe UI",sans-serif';fg.fillText('Dayananda Sagar',215,182);
+ fg.font='500 24px "Segoe UI",sans-serif';fg.fillStyle='#7dd3fc';fg.fillText('College Of Engineering',218,222);
+ const glassFacadeTex=new THREE.CanvasTexture(fc);
+
+ // 2. Blue Department of Automobile Engineering Signboard Texture
+ const sc=document.createElement('canvas');sc.width=512;sc.height=256;const sg=sc.getContext('2d');
+ sg.fillStyle='#1d4ed8';sg.fillRect(0,0,512,256);
+ sg.strokeStyle='#ffffff';sg.lineWidth=8;sg.strokeRect(8,8,496,240);
+ sg.beginPath();sg.arc(50,48,20,0,Math.PI*2);sg.fillStyle='#ffffff';sg.fill();
+ sg.beginPath();sg.arc(50,48,16,0,Math.PI*2);sg.fillStyle='#0284c7';sg.fill();
+ sg.textAlign='left';sg.fillStyle='#ffffff';sg.font='bold 18px "Segoe UI",sans-serif';
+ sg.fillText('DAYANANDA SAGAR INSTITUTIONS',80,54);
+ sg.strokeStyle='rgba(255,255,255,.7)';sg.lineWidth=2;sg.beginPath();sg.moveTo(22,74);sg.lineTo(490,74);sg.stroke();
+ sg.textAlign='center';sg.font='bold 35px "Segoe UI",sans-serif';sg.fillText('DEPARTMENT OF',256,134);
+ sg.font='bold 31px "Segoe UI",sans-serif';sg.letterSpacing='1px';sg.fillText('AUTOMOBILE ENGINEERING',256,192);
+ const signTex=new THREE.CanvasTexture(sc);
+
+ // 3. Sloped glass entrance atrium texture
+ const ac=document.createElement('canvas');ac.width=128;ac.height=128;const ag=ac.getContext('2d');
+ ag.fillStyle='rgba(180,225,245,.35)';ag.fillRect(0,0,128,128);ag.strokeStyle='#ffffff';ag.lineWidth=3;ag.strokeRect(0,0,128,128);
+ const atriumTex=new THREE.CanvasTexture(ac);atriumTex.wrapS=atriumTex.wrapT=THREE.RepeatWrapping;atriumTex.repeat.set(3,3);
+
+ // Materials
+ const mTower=new THREE.MeshStandardMaterial({color:0x333b42,roughness:.7});
+ const mTowerBand=new THREE.MeshStandardMaterial({color:0xe2e8f0,roughness:.5});
+ const mTowerWin=new THREE.MeshStandardMaterial({color:0x1e293b,metalness:.6,roughness:.3});
+ const mWhiteFrame=new THREE.MeshStandardMaterial({color:0xf1f5f9,roughness:.4});
+ const mTiltedGlass=new THREE.MeshStandardMaterial({map:glassFacadeTex,metalness:.5,roughness:.2});
+ const mAtriumGlass=new THREE.MeshStandardMaterial({map:atriumTex,color:0xbae6fd,transparent:true,opacity:.65,roughness:.1,side:THREE.DoubleSide});
+ const mSign=new THREE.MeshStandardMaterial({map:signTex,roughness:.5});
+ const mSteel=new THREE.MeshStandardMaterial({color:0x94a3b8,metalness:.8,roughness:.2});
+ const mPlinth=new THREE.MeshStandardMaterial({color:0x3f3f46,roughness:.9});
+ const mPlant=new THREE.MeshStandardMaterial({color:0x15803d,roughness:.8});
+ const mDoor=new THREE.MeshStandardMaterial({color:0x0284c7,transparent:true,opacity:.75});
+
+ // Base plinth
+ add(bx(32,.4,26),mPlinth,0,.2,0);
+
+ // Tower body (behind & right)
+ const TW=12,TH=17,TD=14;
+ add(bx(TW,TH,TD),mTower,6,TH/2+.4,-3);
+ for(let f=1;f<=5;f++)add(bx(TW+.3,.35,TD+.3),mTowerBand,6,f*2.8+.4,-3);
+ for(let f=1;f<=4;f++)add(bx(.2,1.4,2.2),mTowerWin,12.1,f*2.8+1.2,-3);
+ add(bx(8,2.5,9),mTower,6,TH+1.65,-3);
+
+ // Canted Inverted Tilted Glass Facade (tilted forward by 0.18 rad)
+ const tiltG=new THREE.Group();tiltG.position.set(-3.5,6.2,2.4);tiltG.rotation.x=.18;
+ const FW=15,FH=11,FD=7;
+ const b1=new THREE.Mesh(bx(FW,FH,FD),mTower);tiltG.add(b1);
+ const b2=new THREE.Mesh(bx(FW+.5,FH+.5,.4),mWhiteFrame);b2.position.set(0,0,FD/2+.05);tiltG.add(b2);
+ const b3=new THREE.Mesh(new THREE.PlaneGeometry(FW,FH),mTiltedGlass);b3.position.set(0,0,FD/2+.27);tiltG.add(b3);
+ G.add(tiltG);
+
+ // Slanted Glass Conservatory / Atrium Entrance
+ const AW=7.5,AH=4.8,AD=4.8;
+ add(bx(AW,AH,AD),mAtriumGlass,-3.5,AH/2+.4,6.2);
+ const slopedRoof=add(new THREE.PlaneGeometry(AW+.4,5.2),mAtriumGlass,-3.5,AH+1.2,5.2);
+ slopedRoof.rotation.x=-.55;
+ add(bx(AW+.2,.2,AD+.2),mWhiteFrame,-3.5,AH+.4,6.2);
+ add(bx(.2,AH,.2),mSteel,-3.5-AW/2,AH/2+.4,6.2+AD/2);
+ add(bx(.2,AH,.2),mSteel,-3.5+AW/2,AH/2+.4,6.2+AD/2);
+ add(bx(3.2,2.8,.1),mDoor,-3.5,1.8,6.2+AD/2+.05);
+
+ // Blue Department Signboard in foreground planter
+ const SW=4.8,SH=2.4;
+ const signMesh=add(new THREE.PlaneGeometry(SW,SH),mSign,-8.5,2.6,9.8);signMesh.rotation.y=.1;
+ add(bx(.12,2.6,.12),mSteel,-8.5-SW/2+.3,1.3,9.8);
+ add(bx(.12,2.6,.12),mSteel,-8.5+SW/2-.3,1.3,9.8);
+
+ // Planter beds & bushes
+ add(bx(6,.45,2.5),mWhiteFrame,-8.5,.4,9.6);
+ for(let p=0;p<5;p++)add(new THREE.DodecahedronGeometry(.35,1),mPlant,-10.5+p*1.,.8,9.6);
+ add(new THREE.DodecahedronGeometry(.9,1),mPlant,-11,1.8,4);
+ add(new THREE.DodecahedronGeometry(.75,1),mPlant,-11,2.8,4);
+
+ return G;
+}
+function buildLibrary(){
+ const G=new THREE.Group();
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+
+ // Blue reflective glass curtain wall texture
+ const gc=document.createElement('canvas');gc.width=256;gc.height=256;const gg=gc.getContext('2d');
+ const gr=gg.createLinearGradient(0,0,0,256);gr.addColorStop(0,'#1d4ed8');gr.addColorStop(.5,'#2563eb');gr.addColorStop(1,'#1e40af');
+ gg.fillStyle=gr;gg.fillRect(0,0,256,256);
+ gg.strokeStyle='rgba(255,255,255,.28)';gg.lineWidth=2;
+ for(let x=0;x<=256;x+=32){gg.beginPath();gg.moveTo(x,0);gg.lineTo(x,256);gg.stroke()}
+ for(let y=0;y<=256;y+=42){gg.beginPath();gg.moveTo(0,y);gg.lineTo(256,y);gg.stroke()}
+ const libGlassTex=new THREE.CanvasTexture(gc);libGlassTex.wrapS=libGlassTex.wrapT=THREE.RepeatWrapping;libGlassTex.repeat.set(4,3);
+
+ // Silver / Off-white Alucobond ACP panel texture
+ const pc=document.createElement('canvas');pc.width=128;pc.height=128;const pg=pc.getContext('2d');
+ pg.fillStyle='#f1f5f9';pg.fillRect(0,0,128,128);pg.strokeStyle='#cbd5e1';pg.lineWidth=2;
+ for(let y=0;y<=128;y+=32){pg.beginPath();pg.moveTo(0,y);pg.lineTo(128,y);pg.stroke()}
+ for(let x=0;x<=128;x+=64){pg.beginPath();pg.moveTo(x,0);pg.lineTo(x,128);pg.stroke()}
+ const libPanelTex=new THREE.CanvasTexture(pc);libPanelTex.wrapS=libPanelTex.wrapT=THREE.RepeatWrapping;libPanelTex.repeat.set(2,4);
+
+ // Materials
+ const mGlass=new THREE.MeshStandardMaterial({map:libGlassTex,color:0x93c5fd,metalness:.6,roughness:.15});
+ const mPanel=new THREE.MeshStandardMaterial({map:libPanelTex,roughness:.4,metalness:.25});
+ const mBody=new THREE.MeshStandardMaterial({color:0x334155,roughness:.7});
+ const mDarkEntry=new THREE.MeshStandardMaterial({color:0x0f172a,roughness:.8});
+ const mPlinth=new THREE.MeshStandardMaterial({color:0x3f3f46,roughness:.9});
+ const mCornice=new THREE.MeshStandardMaterial({color:0xe2e8f0,metalness:.7,roughness:.3});
+ const mTrunk=new THREE.MeshStandardMaterial({color:0x785135,roughness:.9});
+ const mFrond=new THREE.MeshStandardMaterial({color:0x15803d,roughness:.6,side:THREE.DoubleSide});
+ const mFlower=new THREE.MeshStandardMaterial({color:0xeab308,roughness:.8});
+
+ // Base plinth & plaza
+ add(bx(32,.4,24),mPlinth,0,.2,0);
+
+ // Main building volume
+ const LW=26,LH=13,LD=14;
+ add(bx(LW,LH,LD),mBody,0,LH/2+.4,-2);
+
+ // Electric Blue Glass Curtain Wall Facade (Center & Right)
+ const GW=18,GH=LH-.4;
+ add(bx(GW,GH,.2),mGlass,3.8,GH/2+.6,5.1);
+
+ // Stepped Silver Alucobond Cladding Feature (Left Corner wrap-around)
+ add(bx(8,LH,.4),mPanel,-9,LH/2+.4,5.2);
+ add(bx(4,8,.4),mPanel,-3,4+.4,5.2);
+ add(bx(.4,LH,14),mPanel,-13,LH/2+.4,-2);
+
+ // Projecting Top Roof Cornice
+ add(bx(LW+1,.5,LD+2),mCornice,0,LH+.65,-1);
+
+ // Recessed Ground Floor Entrance Lobby
+ add(bx(8,3,.8),mDarkEntry,2,1.7,5.3);
+ add(bx(6,2.4,.1),new THREE.MeshStandardMaterial({color:0x38bdf8,transparent:true,opacity:.7}),2,1.5,5.75);
+
+ // Two iconic Palm Trees in forecourt (from photo)
+ const makePalm=(px,pz)=>{
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.28,6.8,8),mTrunk);trunk.position.set(px,3.6,pz);trunk.rotation.z=-.05;G.add(trunk);
+  for(let i=0;i<9;i++){
+   const a=(i/9)*Math.PI*2;const lf=new THREE.Mesh(new THREE.ConeGeometry(.65,3.2,4),mFrond);
+   lf.position.set(px+Math.cos(a)*1.1,6.8,pz+Math.sin(a)*1.1);lf.rotation.x=Math.sin(a)*.85;lf.rotation.z=-Math.cos(a)*.85;G.add(lf);
+  }
+ };
+ makePalm(-2,8.2);
+ makePalm(4,8.5);
+
+ // Planter bed with flowers in front
+ add(bx(14,.35,2.5),mPlinth,1,.35,8.4);
+ for(let f=0;f<8;f++)add(new THREE.DodecahedronGeometry(.28,1),mFlower,-4+f*1.2,.65,8.4);
+
+ return G;
+}
+
+function buildManagement(){
+ const G=new THREE.Group();
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+
+ // Terracotta brick texture
+ const bc=document.createElement('canvas');bc.width=128;bc.height=128;const bg=bc.getContext('2d');
+ bg.fillStyle='#b8432a';bg.fillRect(0,0,128,128);bg.strokeStyle='rgba(60,20,10,.45)';bg.lineWidth=2;
+ for(let y=0;y<=128;y+=16){bg.beginPath();bg.moveTo(0,y);bg.lineTo(128,y);bg.stroke();const off=(y/16)%2?16:0;for(let x=-off;x<=128;x+=32){bg.beginPath();bg.moveTo(x,y);bg.lineTo(x,y+16);bg.stroke()}}
+ const brickTex=new THREE.CanvasTexture(bc);brickTex.wrapS=brickTex.wrapT=THREE.RepeatWrapping;brickTex.repeat.set(4,4);
+
+ // Dark diamond-patterned curtain texture for canted wedge
+ const dc=document.createElement('canvas');dc.width=128;dc.height=128;const dg=dc.getContext('2d');
+ dg.fillStyle='#27272a';dg.fillRect(0,0,128,128);dg.strokeStyle='#52525b';dg.lineWidth=2;
+ for(let i=-64;i<=192;i+=32){dg.beginPath();dg.moveTo(i,0);dg.lineTo(i+64,128);dg.stroke();dg.beginPath();dg.moveTo(i+64,0);dg.lineTo(i,128);dg.stroke()}
+ const prowTex=new THREE.CanvasTexture(dc);prowTex.wrapS=prowTex.wrapT=THREE.RepeatWrapping;prowTex.repeat.set(2,3);
+
+ // Materials
+ const mBrick=new THREE.MeshStandardMaterial({map:brickTex,roughness:.85});
+ const mProw=new THREE.MeshStandardMaterial({map:prowTex,roughness:.45,metalness:.4});
+ const mYellowCanopy=new THREE.MeshStandardMaterial({color:0xfacc15,roughness:.35,metalness:.3});
+ const mWindow=new THREE.MeshStandardMaterial({color:0x1e293b,metalness:.7,roughness:.2});
+ const mPlinth=new THREE.MeshStandardMaterial({color:0x3f3f46,roughness:.9});
+ const mSteel=new THREE.MeshStandardMaterial({color:0x94a3b8,metalness:.8,roughness:.2});
+ const mShrub=new THREE.MeshStandardMaterial({color:0x15803d,roughness:.8});
+
+ // Base plinth
+ add(bx(28,.4,24),mPlinth,0,.2,0);
+
+ // Right Wing: Warm Red / Terracotta Brick Block
+ const RW=16,RH=13,RD=14;
+ add(bx(RW,RH,RD),mBrick,4.5,RH/2+.4,-1.5);
+ for(let f=1;f<=4;f++){
+  for(let w=0;w<3;w++)add(bx(1.6,1.4,.2),mWindow,1+w*3.6,f*2.6+1.2,5.6);
+ }
+ add(bx(RW+.4,.4,RD+.4),mPlinth,4.5,RH+.6,-1.5);
+
+ // Left Wing: Striking Angled Wedge / Canted Prow
+ const wedgeG=new THREE.Group();wedgeG.position.set(-6,6.5,2.5);
+ const wedge=new THREE.Mesh(bx(11,13,8),mProw);wedge.rotation.y=.22;wedge.rotation.z=-.14;wedgeG.add(wedge);
+ for(let i=0;i<3;i++){
+  const aw=new THREE.Mesh(bx(1.2,1.2,.2),mWindow);aw.position.set(-2+i*1.8,i*2.8-2,4.1);aw.rotation.z=Math.PI/4;wedge.add(aw);
+ }
+ G.add(wedgeG);
+
+ // Prominent Yellow Entrance Canopy Portal at ground floor (from photo)
+ const CW=5.5,CD=3.8,CH=.35;
+ add(bx(CW,CH,CD),mYellowCanopy,-1.5,3.2,7.2);
+ add(bx(.15,3,.15),mSteel,-1.5-CW/2+.2,1.5,7.2+CD/2-.2);
+ add(bx(.15,3,.15),mSteel,-1.5+CW/2-.2,1.5,7.2+CD/2-.2);
+ add(bx(3,2.6,.1),mWindow,-1.5,1.5,5.6);
+
+ // Landscaping / yellow curb flower bed
+ add(bx(10,.35,1.8),mYellowCanopy,-3,.35,9.6);
+ for(let s=0;s<6;s++)add(new THREE.DodecahedronGeometry(.35,1),mShrub,-6+s*1.2,.7,9.6);
+
+ return G;
+}
+function buildHospital(){
+ const G=new THREE.Group();
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+
+ // 1. Sky-blue reflective glass texture with subtle cloud sheen & structural mullions
+ const gc=document.createElement('canvas');gc.width=512;gc.height=256;const gg=gc.getContext('2d');
+ const gr=gg.createLinearGradient(0,0,0,256);gr.addColorStop(0,'#0284c7');gr.addColorStop(.3,'#38bdf8');gr.addColorStop(.7,'#0ea5e9');gr.addColorStop(1,'#0369a1');
+ gg.fillStyle=gr;gg.fillRect(0,0,512,256);
+ gg.fillStyle='rgba(255,255,255,.22)';
+ gg.beginPath();gg.arc(140,90,60,0,Math.PI*2);gg.arc(200,80,75,0,Math.PI*2);gg.arc(260,95,55,0,Math.PI*2);gg.arc(380,110,70,0,Math.PI*2);gg.fill();
+ gg.strokeStyle='rgba(255,255,255,.32)';gg.lineWidth=2.5;
+ for(let x=0;x<=512;x+=32){gg.beginPath();gg.moveTo(x,0);gg.lineTo(x,256);gg.stroke()}
+ for(let y=0;y<=256;y+=32){gg.beginPath();gg.moveTo(0,y);gg.lineTo(512,y);gg.stroke()}
+ const hospGlassTex=new THREE.CanvasTexture(gc);hospGlassTex.wrapS=hospGlassTex.wrapT=THREE.RepeatWrapping;hospGlassTex.repeat.set(2,2);
+
+ // 2. Sagar Hospitals Signboard Marquee with Medical Cross and EMERGENCY tag
+ const sc=document.createElement('canvas');sc.width=512;sc.height=96;const sg=sc.getContext('2d');
+ sg.fillStyle='#f8fafc';sg.fillRect(0,0,512,96);
+ sg.fillStyle='#ec4899';
+ sg.fillRect(52,42,36,12);sg.fillRect(64,30,12,36);
+ sg.fillStyle='#0f172a';sg.font='bold 29px "Segoe UI",sans-serif';sg.textAlign='left';sg.fillText('Sagar Hospitals',105,58);
+ sg.fillStyle='#dc2626';sg.fillRect(360,20,135,56);
+ sg.fillStyle='#ffffff';sg.font='bold 17px "Segoe UI",sans-serif';sg.textAlign='center';sg.fillText('EMERGENCY',427,54);
+ const hospSignTex=new THREE.CanvasTexture(sc);
+
+ // Materials
+ const mGlass=new THREE.MeshStandardMaterial({map:hospGlassTex,color:0xbae6fd,metalness:.6,roughness:.15});
+ const mWhitePanel=new THREE.MeshStandardMaterial({color:0xf1f5f9,roughness:.35});
+ const mBluePylon=new THREE.MeshStandardMaterial({color:0x1d4ed8,roughness:.4,metalness:.2});
+ const mSign=new THREE.MeshStandardMaterial({map:hospSignTex,roughness:.4});
+ const mSteel=new THREE.MeshStandardMaterial({color:0x94a3b8,metalness:.85,roughness:.2});
+ const mPlinth=new THREE.MeshStandardMaterial({color:0x3f3f46,roughness:.9});
+ const mPlant=new THREE.MeshStandardMaterial({color:0x15803d,roughness:.8});
+ const mTrunk=new THREE.MeshStandardMaterial({color:0x785135,roughness:.9});
+ const mFrond=new THREE.MeshStandardMaterial({color:0x15803d,roughness:.6,side:THREE.DoubleSide});
+ const mMech=new THREE.MeshStandardMaterial({color:0x64748b,metalness:.5,roughness:.6});
+
+ // Base plinth
+ add(bx(44,.4,26),mPlinth,0,.2,0);
+
+ // Main hospital wings (Left & Right)
+ const WW=17,WH=14,WD=15;
+ add(bx(WW,WH,WD),mWhitePanel,-12,WH/2+.4,-1);
+ add(bx(WW,WH,WD),mWhitePanel,12,WH/2+.4,-1);
+ add(bx(WW-.4,WH-1,.2),mGlass,-12,(WH-1)/2+.9,6.6);
+ add(bx(WW-.4,WH-1,.2),mGlass,12,(WH-1)/2+.9,6.6);
+ for(let i=-20;i<=20;i+=8){
+  if(Math.abs(i)>4)add(bx(.6,WH,.3),mWhitePanel,i,WH/2+.4,6.7);
+ }
+
+ // Central Landmark Bay & Entrance Tower
+ const CW=12,CH=16.5,CD=16;
+ add(bx(CW,CH,CD),mWhitePanel,0,CH/2+.4,-.5);
+ add(bx(CW-2,CH-1,.2),mGlass,0,(CH-1)/2+.9,7.6);
+ add(bx(1.6,CH,.4),mBluePylon,-2.8,CH/2+.4,7.7);
+ add(bx(1.6,CH,.4),mBluePylon,2.8,CH/2+.4,7.7);
+
+ // Semi-circular curved observation balcony on 3rd floor
+ const balcCyl=new THREE.CylinderGeometry(2.4,2.4,.5,16,1,false,0,Math.PI);
+ const balc=add(balcCyl,mWhitePanel,0,8.5,7.7);balc.rotation.x=Math.PI/2;
+ add(new THREE.TorusGeometry(2.35,.08,8,16,Math.PI),mSteel,0,9.1,7.7).rotation.x=Math.PI/2;
+
+ // Main Entrance Cube & Glass Porch (Ground floor)
+ add(bx(8.5,3.8,3),mWhitePanel,0,2.3,8.6);
+ add(bx(6,2.8,.1),new THREE.MeshStandardMaterial({color:0x0284c7,transparent:true,opacity:.75}),0,1.8,10.15);
+ add(bx(9,.25,3),mWhitePanel,0,4.2,10.1);
+ add(new THREE.CylinderGeometry(.04,.04,2.5),mSteel,-3.5,4.7,9.8).rotation.x=.45;
+ add(new THREE.CylinderGeometry(.04,.04,2.5),mSteel,3.5,4.7,9.8).rotation.x=.45;
+
+ // Sagar Hospitals Signboard Marquee on entrance facade
+ add(new THREE.PlaneGeometry(16,2.8),mSign,0,5.7,8.2);
+
+ // Rooftop Hospital Infrastructure (HVAC chillers, plant equipment & antenna mast)
+ add(bx(5,3,6),mWhitePanel,-8,WH+1.9,-3);
+ add(bx(5,3,6),mWhitePanel,8,WH+1.9,-3);
+ for(let c=0;c<3;c++){
+  add(bx(2.8,1.6,2.2),mMech,-14+c*4,WH+1.2,-2);
+  add(bx(2.8,1.6,2.2),mMech,6+c*4,WH+1.2,-2);
+ }
+ add(new THREE.CylinderGeometry(.08,.2,6,8),mSteel,0,CH+3.4,-2);
+ add(new THREE.SphereGeometry(.25,8,8),new THREE.MeshStandardMaterial({color:0xef4444,emissive:0xef4444,emissiveIntensity:1}),0,CH+6.4,-2);
+
+ // Palm trees flanking entrance
+ const makePalm=(px,pz)=>{
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.2,.3,7.5,8),mTrunk);trunk.position.set(px,4.1,pz);trunk.rotation.z=-.04;G.add(trunk);
+  for(let i=0;i<9;i++){
+   const a=(i/9)*Math.PI*2;const lf=new THREE.Mesh(new THREE.ConeGeometry(.7,3.5,4),mFrond);
+   lf.position.set(px+Math.cos(a)*1.2,7.7,pz+Math.sin(a)*1.2);lf.rotation.x=Math.sin(a)*.85;lf.rotation.z=-Math.cos(a)*.85;G.add(lf);
+  }
+ };
+ makePalm(-7.5,10.5);
+ makePalm(7.5,10.5);
+
+ // Hedge planters
+ add(bx(36,.4,1.8),mWhitePanel,0,.4,11.2);
+ for(let h=-16;h<=16;h+=2){
+  if(Math.abs(h)>3.5)add(new THREE.DodecahedronGeometry(.45,1),mPlant,h,.8,11.2);
+ }
+
+ return G;
+}
+function buildAmenityCenter(){
+ const G=new THREE.Group();
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+
+ // Signboard texture
+ const sc=document.createElement('canvas');sc.width=512;sc.height=128;const sg=sc.getContext('2d');
+ sg.fillStyle='#0f172a';sg.fillRect(0,0,512,128);sg.strokeStyle='#0284c7';sg.lineWidth=6;sg.strokeRect(6,6,500,116);
+ sg.fillStyle='#38bdf8';sg.font='bold 16px sans-serif';sg.textAlign='center';sg.fillText('DAYANANDA SAGAR CAMPUS',256,32);
+ sg.fillStyle='#f8fafc';sg.font='bold 27px Georgia,serif';sg.fillText('CENTRAL AMENITY CENTER',256,70);
+ sg.fillStyle='#f59e0b';sg.font='600 14px sans-serif';sg.fillText('FOOD COURT · FLEET & EMERGENCY DISPATCH DEPOT',256,102);
+ const signTex=new THREE.CanvasTexture(sc);
+
+ // Shutter roll-up garage door texture
+ const shc=document.createElement('canvas');shc.width=128;shc.height=128;const shg=shc.getContext('2d');
+ shg.fillStyle='#cbd5e1';shg.fillRect(0,0,128,128);shg.strokeStyle='#94a3b8';shg.lineWidth=3;
+ for(let y=0;y<=128;y+=12){shg.beginPath();shg.moveTo(0,y);shg.lineTo(128,y);shg.stroke()}
+ const shutterTex=new THREE.CanvasTexture(shc);shutterTex.wrapS=shutterTex.wrapT=THREE.RepeatWrapping;shutterTex.repeat.set(1,2);
+
+ // Cafeteria glass texture
+ const cfc=document.createElement('canvas');cfc.width=256;cfc.height=128;const cfg=cfc.getContext('2d');
+ cfg.fillStyle='rgba(254,240,138,.35)';cfg.fillRect(0,0,256,128);cfg.strokeStyle='#475569';cfg.lineWidth=3;
+ for(let x=0;x<=256;x+=64){cfg.beginPath();cfg.moveTo(x,0);cfg.lineTo(x,128);cfg.stroke()}
+ cfg.strokeRect(0,0,256,128);
+ const cafeGlassTex=new THREE.CanvasTexture(cfc);cafeGlassTex.wrapS=cafeGlassTex.wrapT=THREE.RepeatWrapping;cafeGlassTex.repeat.set(2,1);
+
+ // Materials
+ const mPlinth=new THREE.MeshStandardMaterial({color:0x334155,roughness:.9});
+ const mConcrete=new THREE.MeshStandardMaterial({color:0xe2e8f0,roughness:.6});
+ const mShutter=new THREE.MeshStandardMaterial({map:shutterTex,metalness:.4,roughness:.4});
+ const mCafeGlass=new THREE.MeshStandardMaterial({map:cafeGlassTex,color:0xfef08a,transparent:true,opacity:.7,roughness:.2});
+ const mSign=new THREE.MeshStandardMaterial({map:signTex,roughness:.4});
+ const mCanopy=new THREE.MeshStandardMaterial({color:0x0284c7,roughness:.4});
+ const mSteel=new THREE.MeshStandardMaterial({color:0x94a3b8,metalness:.85,roughness:.2});
+ 
+ // Vehicle Materials
+ const mBusYellow=new THREE.MeshStandardMaterial({color:0xfacc15,roughness:.3});
+ const mBusBlue=new THREE.MeshStandardMaterial({color:0x1d4ed8,roughness:.4});
+ const mFireRed=new THREE.MeshStandardMaterial({color:0xdc2626,roughness:.3});
+ const mAmbWhite=new THREE.MeshStandardMaterial({color:0xf8fafc,roughness:.3});
+ const mVehGlass=new THREE.MeshStandardMaterial({color:0x0f172a,metalness:.7,roughness:.2});
+ const mWheel=new THREE.MeshStandardMaterial({color:0x18181b,roughness:.9});
+ const mRedLight=new THREE.MeshStandardMaterial({color:0xef4444,emissive:0xef4444,emissiveIntensity:.9});
+ const mBlueLight=new THREE.MeshStandardMaterial({color:0x38bdf8,emissive:0x0284c7,emissiveIntensity:.9});
+
+ // 1. Base Depot Platform
+ add(bx(44,.4,32),mPlinth,0,.2,0);
+
+ // 2. Ground-floor Depot Building & Vehicle Bays (Rear)
+ const BW=38,BH=6.5,BD=12;
+ add(bx(BW,BH,BD),mConcrete,0,BH/2+.4,-6);
+ for(let b=0;b<4;b++){
+  const bxPos=-13.5+b*9;
+  add(bx(7.2,4.8,.3),mShutter,bxPos,2.8,0.15);
+  add(bx(7.8,.4,.6),mCanopy,bxPos,5.4,0.3);
+ }
+
+ // 3. Upper Floors: Campus Cafeteria / Food Court
+ const CW=32,CH=5.5,CD=10;
+ add(bx(CW,CH,CD),mConcrete,0,BH+CH/2+.4,-6);
+ add(bx(CW-.8,CH-.8,.3),mCafeGlass,0,BH+CH/2+.4,-.85);
+
+ // 4. Roof Dispatch Command Control Tower & Radar
+ add(bx(10,3.5,8),mConcrete,-8,BH+CH+1.75+.4,-6);
+ add(new THREE.CylinderGeometry(.1,.1,5,8),mSteel,-8,BH+CH+6,-6);
+ add(new THREE.SphereGeometry(.2,8,8),mRedLight,-8,BH+CH+8.5,-6);
+ const dish=add(new THREE.CylinderGeometry(1.2,.2,.4,16),mSteel,-5,BH+CH+4.2,-6);dish.rotation.x=Math.PI/3;
+
+ // 5. Large Amenity Center Signboard
+ add(new THREE.PlaneGeometry(24,4.2),mSign,0,BH+2.8,-.7);
+
+ // 6. Covered Bus Transit Platform in foreground
+ add(bx(18,.35,7),mCanopy,-8,4,8.5);
+ add(new THREE.CylinderGeometry(.12,.12,3.8),mSteel,-16,2,8.5);
+ add(new THREE.CylinderGeometry(.12,.12,3.8),mSteel,-8,2,8.5);
+ add(new THREE.CylinderGeometry(.12,.12,3.8),mSteel,0,2,8.5);
+
+ // Helper for wheels
+ const addWheel=(g,wx,wy,wz)=>{
+  const wh=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.3,12),mWheel);wh.rotation.z=Math.PI/2;wh.position.set(wx,wy,wz);g.add(wh);
+ };
+
+ // A. Campus Buses parked at Transit Platform
+ const makeBus=(px,pz,ry)=>{
+  const bg=new THREE.Group();
+  const bBody=new THREE.Mesh(bx(2.4,2.1,7.2),mBusYellow);bBody.position.y=1.5;bg.add(bBody);
+  const bStr=new THREE.Mesh(bx(2.44,.4,7.22),mBusBlue);bStr.position.y=1.1;bg.add(bStr);
+  const bWin=new THREE.Mesh(bx(2.42,.8,6.8),mVehGlass);bWin.position.y=1.8;bg.add(bWin);
+  const bAc=new THREE.Mesh(bx(1.6,.35,2.4),mConcrete);bAc.position.y=2.7;bg.add(bAc);
+  addWheel(bg,-1.2,.42,-2.2);addWheel(bg,1.2,.42,-2.2);
+  addWheel(bg,-1.2,.42,1.8);addWheel(bg,1.2,.42,1.8);
+  addWheel(bg,-1.2,.42,2.8);addWheel(bg,1.2,.42,2.8);
+  bg.position.set(px,0,pz);bg.rotation.y=ry;G.add(bg);
+ };
+ makeBus(-12,8.5,0);
+ makeBus(-5,8.5,0);
+
+ // B. Fire Brigade in Bay
+ const makeFireTruck=(px,pz,ry)=>{
+  const fg=new THREE.Group();
+  const fBody=new THREE.Mesh(bx(2.3,2.2,5.8),mFireRed);fBody.position.y=1.5;fg.add(fBody);
+  const fCab=new THREE.Mesh(bx(2.32,.9,1.8),mVehGlass);fCab.position.set(0,1.8,1.8);fg.add(fCab);
+  const fLad=new THREE.Mesh(bx(.9,.18,4.8),mSteel);fLad.position.set(0,2.7,-.5);fg.add(fLad);
+  const fLb=new THREE.Mesh(bx(1.8,.18,.35),mRedLight);fLb.position.set(0,2.7,1.8);fg.add(fLb);
+  addWheel(fg,-1.15,.45,-1.6);addWheel(fg,1.15,.45,-1.6);
+  addWheel(fg,-1.15,.45,1.6);addWheel(fg,1.15,.45,1.6);
+  fg.position.set(px,0,pz);fg.rotation.y=ry;G.add(fg);
+ };
+ makeFireTruck(5,5,0);
+
+ // C. Ambulance in Bay
+ const makeAmbulance=(px,pz,ry)=>{
+  const ag=new THREE.Group();
+  const aBody=new THREE.Mesh(bx(2.1,2.0,5.0),mAmbWhite);aBody.position.y=1.4;ag.add(aBody);
+  const aWin=new THREE.Mesh(bx(2.12,.8,1.6),mVehGlass);aWin.position.set(0,1.6,1.4);ag.add(aWin);
+  const c1=new THREE.Mesh(bx(2.14,.7,.22),mRedLight);c1.position.set(0,1.4,-.8);ag.add(c1);
+  const c2=new THREE.Mesh(bx(2.14,.22,.7),mRedLight);c2.position.set(0,1.4,-.8);ag.add(c2);
+  const aLb=new THREE.Mesh(bx(1.6,.18,.35),mBlueLight);aLb.position.set(0,2.5,1.3);ag.add(aLb);
+  addWheel(ag,-1.05,.42,-1.4);addWheel(ag,1.05,.42,-1.4);
+  addWheel(ag,-1.05,.42,1.4);addWheel(ag,1.05,.42,1.4);
+  ag.position.set(px,0,pz);ag.rotation.y=ry;G.add(ag);
+ };
+ makeAmbulance(13,5,0);
+
+ return G;
+}
+const MODELS={"Block 17":{b:buildGlassBlock,s:.49,ry:Math.PI/2},"Block 13":{b:buildMech,s:.68,ry:0},"Heritage Block":{b:buildHeritage,s:.55,ry:0},"NRI Hostel":{b:buildNRI,s:.44,ry:Math.PI*1.5},"Auditorium":{b:buildAuditorium,s:.60,ry:0},"Automobile Block":{b:buildAuto,s:.60,ry:0},"Library Block":{b:buildLibrary,s:.60,ry:0},"Management Block":{b:buildManagement,s:.60,ry:0},"Sagar Hospital":{b:buildHospital,s:.52,ry:0},"Amenity Center":{b:buildAmenityCenter,s:.60,ry:0}};
+function hl(n,on){const o=byName[n];if(!o)return;
+ if(o.group)return; // glass block keeps its blue; the pulsing ring marks the incident
+else o.mesh.material.color.setHex(on?0xdc2626:o.mesh.userData.base)}
+
+const meshes=[],byName={};
+B.forEach(([n,x,y,w,h,ht])=>{const [px,pz]=P(x,y);const m=new THREE.Mesh(new THREE.BoxGeometry(w*S,ht,h*S),new THREE.MeshLambertMaterial({color:n.includes("Hospital")?0x2563eb:0x6b8a96}));
+ m.position.set(px,ht/2,pz);m.userData={name:n,base:m.material.color.getHex(),ht};scene.add(m);meshes.push(m);byName[n]={mesh:m,pos:new THREE.Vector3(px,0,pz)};
+ if(MODELS[n]){const M=MODELS[n];m.material=new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false});const g=M.b();g.scale.setScalar(M.s);g.position.set(px,0,pz);g.rotation.y=M.ry;g.traverse(c=>{if(c.isMesh){c.userData=c.userData||{};c.userData.name=n;meshes.push(c)}});scene.add(g);byName[n].group=g}});
+
+[["Medical bay",0,-45],["Fire station",-45,18],["Security post",45,18]].forEach(([n,x,z])=>{const pad=new THREE.Mesh(new THREE.BoxGeometry(6,.08,4),new THREE.MeshLambertMaterial({color:0x26332f}));pad.position.set(x,.04,z);scene.add(pad);byName[n]={pos:new THREE.Vector3(x,0,z-3)}});
+const sel=document.getElementById('loc');B.forEach(b=>sel.add(new Option(b[0],b[0])));
+
+// resources
+const fleet=BASES.map(([type,base,col],i)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(1,.7,1.8),new THREE.MeshLambertMaterial({color:col,emissive:col,emissiveIntensity:.4}));
+ const o=byName[base].pos.clone();o.x+=(i%3-1)*1.2;o.z+=3;m.position.copy(o).setY(.4);scene.add(m);return{type,base,m,home:o.clone(),target:null,inc:null,state:"idle"}});
+
+// incidents
+let incs=[],nextId=1,mode="greedy",log=[];
+const rings=[];
+function addInc(loc,type,sev,ppl){const b=byName[loc];if(!b)return;
+ const inc={id:nextId++,loc,type,sev,ppl,need:[...NEED[type]],got:[],state:"open",t:0,pos:b.pos};
+ const r=new THREE.Mesh(new THREE.RingGeometry(1.5,2,32),new THREE.MeshBasicMaterial({color:0xef4444,side:THREE.DoubleSide,transparent:true,opacity:.9}));
+ r.rotation.x=-Math.PI/2;r.position.set(b.pos.x,.1,b.pos.z);scene.add(r);inc.ring=r;
+ hl(loc,true);incs.push(inc);feed(`<span class="sev">${sev}</span>${type} at ${loc} · ${ppl} people`);assign()}
+function feed(h){const li=document.createElement('li');li.innerHTML=`<small>${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</small> ${h}`;const f=document.getElementById('feed');f.prepend(li);while(f.children.length>30)f.lastChild.remove()}
+
+const dist=(f,inc)=>f.m.position.distanceTo(inc.pos);
+function cost(plan){return plan.reduce((s,[f,inc])=>s+inc.sev*inc.sev*dist(f,inc)/SPEED,0)}
+function assign(){
+ // free fleet and open demand
+ const free=fleet.filter(f=>f.state==="idle"||f.state==="return");
+ const slots=[];incs.filter(i=>i.state!=="done").forEach(i=>{const have=i.got.map(g=>g.type);const need=[...i.need];have.forEach(t=>{const k=need.indexOf(t);if(k>-1)need.splice(k,1)});need.forEach(t=>slots.push({inc:i,type:t}))});
+ let plan=[];
+ if(mode==="greedy"){
+  const used=new Set();
+  [...slots].sort((a,b)=>b.inc.sev-a.inc.sev||b.inc.ppl-a.inc.ppl).forEach(s=>{let best=null,bd=1e9;free.forEach(f=>{if(used.has(f)||f.type!==s.type)return;const d=dist(f,s.inc);if(d<bd){bd=d;best=f}});if(best){used.add(best);plan.push([best,s.inc])}});
+ }else{
+  // placeholder joint optimizer: start from greedy, improve by pairwise swaps on severity-weighted cost
+  const used=new Set();[...slots].forEach(s=>{let best=null,bd=1e9;free.forEach(f=>{if(used.has(f)||f.type!==s.type)return;const d=dist(f,s.inc);if(d<bd){bd=d;best=f}});if(best){used.add(best);plan.push([best,s.inc])}});
+  let improved=true,guard=0;while(improved&&guard++<50){improved=false;
+   for(let a=0;a<plan.length;a++)for(let b=a+1;b<plan.length;b++){if(plan[a][0].type!==plan[b][0].type)continue;
+    const c0=cost([plan[a],plan[b]]);const sw=[[plan[b][0],plan[a][1]],[plan[a][0],plan[b][1]]];if(cost(sw)<c0-1e-6){const t=plan[a][0];plan[a][0]=plan[b][0];plan[b][0]=t;improved=true}}}
+ }
+ plan.forEach(([f,inc])=>{if(f.inc!==inc){f.inc=inc;f.state="go";f.target=inc.pos.clone().setY(.4);f.eta=dist(f,inc)/SPEED;f.rt=f.eta;inc.got.push(f)}});
+ // drop stale got entries
+ incs.forEach(i=>{i.got=i.got.filter(g=>g.inc===i)});
+ kpis()}
+
+let rtLog=[];
+function kpis(){
+ const act=incs.filter(i=>i.state!=="done");
+ let need=0,got=0;act.forEach(i=>{need+=i.need.length;got+=Math.min(i.got.length,i.need.length)});
+ const busy=fleet.filter(f=>f.state==="go"||f.state==="work").length;
+ const rts=fleet.filter(f=>f.inc&&f.rt!=null).map(f=>f.rt);
+ const rt=rts.length?rts.reduce((a,b)=>a+b,0)/rts.length:null;
+ document.getElementById('k_rt').textContent=rt==null?"-":rt.toFixed(1)+" s";
+ document.getElementById('k_ud').textContent=need?Math.round((need-got)/need*100)+"%":"-";
+ document.getElementById('k_ut').textContent=Math.round(busy/fleet.length*100)+"%";
+ document.getElementById('k_ai').textContent=act.length;
+ document.getElementById('k_rt2').textContent=mode==="greedy"?"Conventional":"QUBO (demo)";
+ document.getElementById('k_ud2').textContent=need?`${need-got} of ${need} units unmet`:"";
+ document.getElementById('k_ut2').textContent=`${busy} of ${fleet.length} units busy`;
+ document.getElementById('k_ai2').textContent=`${incs.filter(i=>i.state==="done").length} resolved`}
+
+// controls
+const sev=document.getElementById('sev');sev.oninput=()=>document.getElementById('sv').textContent=sev.value;
+document.getElementById('add').onclick=()=>addInc(sel.value,document.getElementById('typ').value,+sev.value,+document.getElementById('ppl').value||1);
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+document.getElementById('rnd').onclick=()=>addInc(rnd(B)[0],rnd(Object.keys(NEED)),1+Math.floor(Math.random()*5),5+Math.floor(Math.random()*80));
+document.getElementById('clr').onclick=clearAll;
+function clearAll(){incs.forEach(i=>{scene.remove(i.ring);hl(i.loc,false)});incs=[];fleet.forEach(f=>{f.state="return";f.inc=null;f.target=f.home;f.rt=null});kpis()}
+const SC={ALPHA:[["Block 17","Fire",4,40],["Block 13","Medical",3,6],["Heritage Block","Accident",2,4],["Automobile Block","Accident",3,15],["Library Block","Medical",4,45],["Sagar Hospital","Medical",5,60]],BETA:[["Block 17","Flood",4,60],["Block 13","Medical",3,12],["NRI Hostel","Fire",4,35],["Heritage Block","Accident",2,5],["Auditorium","Medical",4,50],["Automobile Block","Fire",4,45],["Management Block","Fire",4,60],["Sagar Hospital","Accident",5,40]],GAMMA:[["Block 17","Accident",5,120],["Block 13","Medical",5,30],["Block 13","Fire",4,50],["Heritage Block","Medical",4,15],["NRI Hostel","Accident",3,10],["Auditorium","Fire",5,150],["Automobile Block","Flood",3,25],["Library Block","Fire",5,90],["Management Block","Medical",4,35],["Sagar Hospital","Medical",5,100],["Amenity Center","Fire",4,55]],AUDITORIUM:[["Auditorium","Fire",5,160],["Auditorium","Medical",4,40],["Block 17","Accident",3,15]],AUTO:[["Automobile Block","Fire",5,60],["Automobile Block","Medical",4,30],["Block 13","Accident",3,12]],LIBRARY:[["Library Block","Fire",4,80],["Library Block","Medical",4,45],["Management Block","Accident",3,10]],MGMT:[["Management Block","Fire",5,70],["Management Block","Medical",4,35],["Library Block","Accident",3,12]],HOSPITAL:[["Sagar Hospital","Medical",5,90],["Sagar Hospital","Accident",4,40],["Block 17","Medical",3,15]],AMENITY:[["Amenity Center","Fire",4,65],["Amenity Center","Medical",4,35],["Sagar Hospital","Medical",3,15]]};
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{clearAll();setTimeout(()=>SC[b.dataset.s].forEach(s=>addInc(...s)),50)});
+document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#mode button').forEach(x=>x.classList.remove('on'));b.classList.add('on');mode=b.dataset.m;
+ fleet.forEach(f=>{if(f.state==="go"){f.state="return";f.target=f.home;f.inc=null}});incs.forEach(i=>i.got=[]);assign()});
+
+// Occupancy data & real-time building statistics
+const OCCUPANCY={
+ "Sagar Hospital":{base:450,type:"Emergency & Trauma Hub",icon:"🏥"},
+ "Block 17":{base:380,type:"Architecture & Design",icon:"🏛️"},
+ "Auditorium":{base:650,type:"Main Campus Auditorium",icon:"🎭"},
+ "Automobile Block":{base:290,type:"Mechanical & Auto Labs",icon:"⚙️"},
+ "Amenity Center":{base:420,type:"Student Dining & Union",icon:"☕"},
+ "Heritage Block":{base:210,type:"Administrative & Heritage",icon:"🏛️"},
+ "Block 13":{base:340,type:"Engineering & Robotics",icon:"💻"},
+ "Library Block":{base:520,type:"Central Digital Library",icon:"📚"},
+ "Management Block":{base:310,type:"Business & Management",icon:"📊"},
+ "NRI Hostel":{base:480,type:"Residential Complex",icon:"🏢"}
+};
+
+const msgBoxEl=document.getElementById('bldgMsgBox');
+const mcIcon=document.getElementById('mcIcon');
+const mcName=document.getElementById('mcName');
+const mcType=document.getElementById('mcType');
+const mcBadge=document.getElementById('mcBadge');
+const mcPeople=document.getElementById('mcPeople');
+const mcThreat=document.getElementById('mcThreat');
+const mcDangerScore=document.getElementById('mcDangerScore');
+const mcSegments=document.getElementById('mcSegments');
+const mcInc=document.getElementById('mcInc');
+const mcIncText=document.getElementById('mcIncText');
+
+let hoveredBuilding=null,pinnedBuilding="Sagar Hospital";
+function getBuildingStatus(name){
+ const occ=OCCUPANCY[name]||{base:300,type:"Campus Facility",icon:"🏢"};
+ const active=incs.filter(i=>i.loc===name&&i.state!=="done");
+ if(!active.length){
+  return {dangerLevel:0,dangerText:"Level 0 · Normal",badgeText:"SECURE",badgeClass:"safe",themeClass:"",totalPeople:occ.base,activeInc:null,type:occ.type,icon:occ.icon};
+ }
+ const maxSev=Math.max(...active.map(i=>i.sev));
+ const totalAffected=active.reduce((s,i)=>s+(i.ppl||0),0);
+ const incTypes=[...new Set(active.map(i=>i.type))].join(", ");
+ let badgeText="MODERATE",badgeClass="elev",themeClass="",dangerText=`Level ${maxSev} · Elevated Risk`;
+ if(maxSev>=5){badgeText="CRITICAL";badgeClass="crit";themeClass="theme-crit";dangerText="Level 5 · Critical Emergency"}
+ else if(maxSev===4){badgeText="HIGH";badgeClass="high";themeClass="theme-high";dangerText="Level 4 · High Hazard"}
+ else if(maxSev===3){badgeText="ELEVATED";badgeClass="elev";themeClass="";dangerText="Level 3 · Elevated"}
+ return {dangerLevel:maxSev,dangerText,badgeText,badgeClass,themeClass,totalPeople:occ.base,activeInc:`Active ${incTypes} · ${totalAffected} affected`,type:occ.type,icon:occ.icon};
+}
+
+function showBldgCard(name){
+ hoveredBuilding=name;
+ const st=getBuildingStatus(name);
+ mcIcon.textContent=st.icon;
+ mcName.textContent=name;
+ mcType.textContent=st.type;
+ mcBadge.textContent=st.badgeText;
+ mcBadge.className="msg-bdg "+st.badgeClass;
+ mcPeople.textContent=st.totalPeople.toLocaleString();
+ mcThreat.textContent=st.dangerText;
+ mcDangerScore.textContent=st.dangerLevel+" / 5";
+ msgBoxEl.className="bldg-msgbox visible "+(st.themeClass||"");
+ 
+ // build segmented danger meter
+ mcSegments.innerHTML="";
+ for(let i=1;i<=5;i++){
+  const b=document.createElement('div');
+  b.className="d-bar";
+  if(i<=st.dangerLevel){
+   if(st.dangerLevel>=5)b.classList.add('fill-crit');
+   else if(st.dangerLevel===4)b.classList.add('fill-high');
+   else if(st.dangerLevel===3)b.classList.add('fill-elev');
+   else b.classList.add('fill-safe');
+  }else if(st.dangerLevel===0&&i===1){
+   b.classList.add('fill-safe');
+  }
+  mcSegments.appendChild(b);
+ }
+ if(st.activeInc){
+  mcInc.style.display="flex";
+  mcIncText.textContent=st.activeInc;
+ }else{
+  mcInc.style.display="none";
+ }
+ updateBldgCardPos();
+}
+
+function hideBldgCard(){
+ if(pinnedBuilding){
+  showBldgCard(pinnedBuilding);
+  return;
+ }
+ hoveredBuilding=null;
+ msgBoxEl.classList.remove('visible');
+}
+
+function updateBldgCardPos(){
+ const target=hoveredBuilding||pinnedBuilding;
+ if(!target||!byName[target])return;
+ const b=byName[target];
+ const wp=b.pos.clone();
+ wp.y=(b.mesh.userData.ht||5)+2.6;
+ wp.project(cam);
+ if(wp.z>1||wp.z<-1){msgBoxEl.classList.remove('visible');return;}
+ const w=cv.clientWidth,h=cv.clientHeight;
+ const sx=Math.max(160,Math.min(w-160,(wp.x*0.5+0.5)*w));
+ const rawY=(-(wp.y*0.5)+0.5)*h;
+ const flip=rawY<210;
+ if(flip){
+  msgBoxEl.classList.add('flipped');
+  msgBoxEl.style.left=sx+"px";
+  msgBoxEl.style.top=Math.max(18,rawY+14)+"px";
+ }else{
+  msgBoxEl.classList.remove('flipped');
+  msgBoxEl.style.left=sx+"px";
+  msgBoxEl.style.top=Math.min(h-20,rawY)+"px";
+ }
+}
+
+// camera orbit (manual)
+let th=.62,ph=.78,rad=160,dragging=false,lx=0,ly=0,moved=0;
+const upd=()=>{cam.position.set(rad*Math.sin(ph)*Math.sin(th),rad*Math.cos(ph),rad*Math.sin(ph)*Math.cos(th));cam.lookAt(0,0,-6)};
+const cv=rend.domElement;
+cv.addEventListener('pointerdown',e=>{dragging=true;moved=0;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId)});
+const ray=new THREE.Raycaster(),mv=new THREE.Vector2();
+
+function checkHover(e){
+ const r=cv.getBoundingClientRect();
+ mv.set(((e.clientX-r.left)/r.width)*2-1,-(((e.clientY-r.top)/r.height))*2+1);
+ ray.setFromCamera(mv,cam);
+ const hits=ray.intersectObjects(meshes);
+ let found=null;
+ for(const h of hits){
+  if(h.object.userData&&h.object.userData.name){found=h.object.userData.name;break;}
+ }
+ if(found){
+  cv.style.cursor="pointer";
+  if(hoveredBuilding!==found)showBldgCard(found);
+  else updateBldgCardPos();
+ }else{
+  cv.style.cursor="default";
+  if(hoveredBuilding&&hoveredBuilding!==pinnedBuilding)hideBldgCard();
+ }
+}
+
+const onPointerMove=e=>{
+ if(dragging){
+  th-=(e.clientX-lx)*.006;ph=Math.max(.25,Math.min(1.45,ph-(e.clientY-ly)*.005));
+  moved+=Math.abs(e.clientX-lx)+Math.abs(e.clientY-ly);lx=e.clientX;ly=e.clientY;
+  updateBldgCardPos();
+  return;
+ }
+ checkHover(e);
+};
+cv.addEventListener('pointermove',onPointerMove);
+cv.addEventListener('mousemove',onPointerMove);
+cv.addEventListener('pointerleave',()=>hideBldgCard());
+
+cv.addEventListener('pointerup',e=>{dragging=false;if(moved<5)pick(e)});
+cv.addEventListener('wheel',e=>{e.preventDefault();rad=Math.max(30,Math.min(300,rad+e.deltaY*.09));updateBldgCardPos()},{passive:false});
+
+function pick(e){
+ const r=cv.getBoundingClientRect();
+ mv.set(((e.clientX-r.left)/r.width)*2-1,-(((e.clientY-r.top)/r.height))*2+1);
+ ray.setFromCamera(mv,cam);
+ const hits=ray.intersectObjects(meshes);
+ let found=null;
+ for(const h of hits){
+  if(h.object.userData&&h.object.userData.name){found=h.object.userData.name;break;}
+ }
+ if(found){
+  sel.value=found;
+  pinnedBuilding=found;
+  showBldgCard(found);
+  document.getElementById('tip').textContent="Selected: "+found+" · choose type and press Add incident";
+ }
+}
+sel.addEventListener('change',()=>{
+ pinnedBuilding=sel.value;
+ showBldgCard(sel.value);
+});
+
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;rend.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix();updateBldgCardPos()}
+addEventListener('resize',resize);resize();upd();
+
+// loop
+let last=performance.now();
+function tick(now){
+ const dt=Math.min((now-last)/1000,.1);last=now;
+ // Update road blue pulse veins
+ roadVeinMat.uniforms.time.value=now*0.001;
+ 
+ fleet.forEach(f=>{
+  if((f.state==="go"||f.state==="return")&&f.target){const d=f.target.clone().sub(f.m.position);const l=d.length();
+   if(l<.3){if(f.state==="go"){f.state="work";f.t=0}else{f.state="idle";f.target=null;assign()}}
+   else{f.m.position.add(d.multiplyScalar(Math.min(1,SPEED*dt/l)));f.m.lookAt(f.target.x,.4,f.target.z)}}
+  if(f.state==="work"){f.t+=dt;f.m.position.y=.4+Math.abs(Math.sin(now/120))*.3;if(f.t>7){f.m.position.y=.4;const i=f.inc;f.state="return";f.target=f.home;f.inc=null;if(i){i.got=i.got.filter(g=>g!==f);i.fin=(i.fin||0)+1;if(i.fin>=i.need.length){i.state="done";scene.remove(i.ring);hl(i.loc,false);feed(`Resolved: ${i.type} at ${i.loc}`);const cur=hoveredBuilding||pinnedBuilding;if(cur===i.loc)showBldgCard(cur)}}kpis()}}});
+ incs.forEach(i=>{if(i.ring){const s=1+((now/700)%1)*1.2;i.ring.scale.set(s,s,s);i.ring.material.opacity=1-((now/700)%1)}});
+ upd();
+ updateBldgCardPos();
+ rend.render(scene,cam);requestAnimationFrame(tick)}
+requestAnimationFrame(tick);kpis();
+// start with a small default scenario so the page is alive
+setTimeout(()=>{SC.ALPHA.forEach(s=>addInc(...s));showBldgCard("Sagar Hospital");},600);
+</script></body></html>
