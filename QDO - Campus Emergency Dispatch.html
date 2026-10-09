@@ -2055,13 +2055,102 @@ rebuildFleet(3,2,2);
 let incs=[],nextId=1,mode="greedy",currentScenario="alpha",simulationActive=false,log=[];
 let lastSolverStats={runtimeMs:0,feasibleBeforeRepair:true,feasibleAfterRepair:true,energyScore:0,solverName:"Greedy Heuristic"};
 const rings=[];
+
+// ════════════════════════════════════════════════════════
+// LIVE PATH VISUALIZATION: Amenity Center -> Incident Buildings
+// ════════════════════════════════════════════════════════
+const livePathMat=new THREE.ShaderMaterial({
+ uniforms:{
+  time:{value:0},
+  color:{value:new THREE.Color(0x00f0ff)}
+ },
+ vertexShader:`
+  varying vec2 vUv;
+  void main(){
+   vUv=uv;
+   gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+  }
+ `,
+ fragmentShader:`
+  uniform float time;
+  uniform vec3 color;
+  varying vec2 vUv;
+  void main(){
+   float speed=time*5.2;
+   float wave1=sin(vUv.x*32.0 - speed)*0.5+0.5;
+   float wave2=sin(vUv.x*64.0 - speed*1.5)*0.5+0.5;
+   float packet=pow(wave1,4.0)*0.8+pow(wave2,5.0)*0.5;
+   float glow=0.65+packet*1.15;
+   vec3 col=mix(color,vec3(1.0,1.0,1.0),packet*0.85);
+   gl_FragColor=vec4(col*glow*1.6, clamp(glow*0.95, 0.45, 1.0));
+  }
+ `,
+ transparent:true,
+ depthWrite:false,
+ blending:THREE.AdditiveBlending,
+ side:THREE.DoubleSide
+});
+
+let livePathObjects=[];
+
+function updateLivePaths(){
+ livePathObjects.forEach(p=>{
+  if(p.tube){scene.remove(p.tube);p.tube.geometry.dispose();}
+  if(p.line){scene.remove(p.line);p.line.geometry.dispose();}
+  if(p.beacon){scene.remove(p.beacon);p.beacon.geometry.dispose();}
+ });
+ livePathObjects=[];
+
+ const amenity=byName["Amenity Center"];
+ if(!amenity) return;
+ const startPos=amenity.pos.clone().setY(0.5);
+
+ const activeBldgs=[...new Set(incs.filter(i=>i.state!=="done").map(i=>i.loc))];
+
+ activeBldgs.forEach(loc=>{
+  if(loc==="Amenity Center") return;
+  const target=byName[loc];
+  if(!target) return;
+
+  const endPos=target.pos.clone().setY(0.5);
+  const midPos=startPos.clone().lerp(endPos,0.5);
+  const dist=startPos.distanceTo(endPos);
+  midPos.y=Math.min(7.0, Math.max(2.4, dist*0.14));
+
+  const curve=new THREE.QuadraticBezierCurve3(startPos, midPos, endPos);
+  const tubeGeo=new THREE.TubeGeometry(curve, 48, 0.42, 8, false);
+  const tubeMesh=new THREE.Mesh(tubeGeo, livePathMat);
+  scene.add(tubeMesh);
+
+  const lineGeo=new THREE.BufferGeometry().setFromPoints([
+   startPos.clone().setY(0.12),
+   endPos.clone().setY(0.12)
+  ]);
+  const lineMesh=new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
+   color:0x00f0ff,
+   transparent:true,
+   opacity:0.85
+  }));
+  scene.add(lineMesh);
+
+  const beaconGeo=new THREE.SphereGeometry(0.55, 12, 12);
+  const beaconMat=new THREE.MeshBasicMaterial({color:0x38bdf8, transparent:true, opacity:0.85});
+  const beacon=new THREE.Mesh(beaconGeo, beaconMat);
+  beacon.position.copy(midPos);
+  scene.add(beacon);
+
+  livePathObjects.push({tube:tubeMesh, line:lineMesh, beacon, loc});
+ });
+}
+
 function addInc(loc,type,sev,ppl){const b=byName[loc];if(!b)return;
  const inc={id:nextId++,loc,type,sev,ppl,need:[...NEED[type]],got:[],state:"open",t:0,pos:b.pos};
  const ringCol=(sev>=4)?0xef4444:(sev===3?0xf59e0b:0xeab308);
  const r=new THREE.Mesh(new THREE.RingGeometry(1.5,2.4,32),new THREE.MeshBasicMaterial({color:ringCol,side:THREE.DoubleSide,transparent:true,opacity:.9}));
  r.rotation.x=-Math.PI/2;r.position.set(b.pos.x,.1,b.pos.z);scene.add(r);inc.ring=r;
  hl(loc,true,sev);incs.push(inc);
- feed(`<span class="sev" style="background:${sev>=4?'#ef4444':(sev>=3?'#f59e0b':'#eab308')}">${sev}</span>${type} reported at <b>${loc}</b> (${ppl} affected) · <i style="color:#94a3b8;">Awaiting "Run Simulation"</i>`);
+ updateLivePaths();
+ feed(`<span class="sev" style="background:${sev>=4?'#ef4444':(sev>=3?'#f59e0b':'#eab308')}">${sev}</span>${type} reported at <b>${loc}</b> (${ppl} affected) · <span style="color:#00f0ff;">Live path active from Amenity Center</span>`);
  kpis();
 }
 function feed(h){const li=document.createElement('li');li.innerHTML=`<small>${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</small> ${h}`;const f=document.getElementById('feed');f.prepend(li);while(f.children.length>30)f.lastChild.remove()}
@@ -2595,7 +2684,7 @@ document.getElementById('clr').onclick=()=>{
   if(!checkAdminPermission('incident clearing')) return;
   clearAll();
 };
-function clearAll(){simulationActive=false;incs.forEach(i=>{scene.remove(i.ring);hl(i.loc,false)});incs=[];fleet.forEach(f=>{f.state="return";f.inc=null;f.target=f.home;f.rt=null});kpis()}
+function clearAll(){simulationActive=false;incs.forEach(i=>{scene.remove(i.ring);hl(i.loc,false)});incs=[];fleet.forEach(f=>{f.state="return";f.inc=null;f.target=f.home;f.rt=null});if(typeof updateLivePaths==='function')updateLivePaths();kpis()}
 const SC={
  ALPHA:[["Block 17","Fire",4,40],["Block 13","Medical",3,6],["Heritage Block","Accident",2,4],["Automobile Block","Accident",3,15],["Library Block","Medical",4,45],["Sagar Hospital","Medical",5,60],["Electronics Block","Fire",4,50],["Block 22","Medical",3,20]],
  BETA:[["Block 17","Flood",4,60],["Block 13","Medical",3,12],["NRI Hostel","Fire",4,35],["Heritage Block","Accident",2,5],["Auditorium","Medical",4,50],["Automobile Block","Fire",4,45],["Management Block","Fire",4,60],["Sagar Hospital","Accident",5,40],["Electronics Block","Medical",4,35],["Block 22","Fire",4,40]],
@@ -2677,24 +2766,17 @@ async function executeSimulation(){
   simulationActive=true;
   feed(`<span style="color:#34d399">🚀 Executing <b>${mode==='qubo'?'Quantum QUBO':'Greedy'}</b> solver for ${activeIncs.length} incident(s)...</span>`);
   
-  let dispatchedViaBackend=false;
-  if(backendOnline && currentScenario && SCENARIO_BACKEND_MAP[currentScenario.toUpperCase()]){
-    dispatchedViaBackend=await backendSolveAndDispatch(currentScenario, mode);
-  }
-  
-  if(!dispatchedViaBackend){
-    fleet.forEach(f=>{
-      if(f.state==="go"){
-        f.state="return";
-        f.target=f.home;
-        f.inc=null;
-      }
-    });
-    incs.forEach(i=>i.got=[]);
-    assign();
-  }
-  
-  feed(`<span style="color:#34d399">✓ Vehicles dispatched across campus network.</span>`);
+  fleet.forEach(f=>{
+    if(f.state==="go"){
+      f.state="return";
+      f.target=f.home;
+      f.inc=null;
+    }
+  });
+  incs.forEach(i=>i.got=[]);
+  assign();
+  updateLivePaths();
+  feed(`<span style="color:#34d399">✓ Vehicles dispatched to affected buildings. Live paths active from Amenity Center.</span>`);
 }
 
 const runSimBtnEl = document.getElementById('runSimBtn');
@@ -3102,12 +3184,13 @@ function tick(now){
  const dt=Math.min((now-last)/1000,.1);last=now;
  // Update road blue pulse veins
  roadVeinMat.uniforms.time.value=now*0.001;
+ if(typeof livePathMat!=='undefined'&&livePathMat.uniforms) livePathMat.uniforms.time.value=now*0.001;
  
  fleet.forEach(f=>{
   if((f.state==="go"||f.state==="return")&&f.target){const d=f.target.clone().sub(f.m.position);const l=d.length();
    if(l<.3){if(f.state==="go"){f.state="work";f.t=0}else{f.state="idle";f.target=null;if(simulationActive)assign()}}
    else{f.m.position.add(d.multiplyScalar(Math.min(1,SPEED*dt/l)));f.m.lookAt(f.target.x,.4,f.target.z)}}
-  if(f.state==="work"){f.t+=dt;f.m.position.y=.4+Math.abs(Math.sin(now/120))*.3;if(f.t>7){f.m.position.y=.4;const i=f.inc;f.state="return";f.target=f.home;f.inc=null;if(i){i.got=i.got.filter(g=>g!==f);i.fin=(i.fin||0)+1;if(i.fin>=i.need.length){i.state="done";scene.remove(i.ring);hl(i.loc,false);feed(`Resolved: ${i.type} at ${i.loc}`);if(hoveredBuilding===i.loc)showBldgCard(hoveredBuilding)}}kpis()}}});
+  if(f.state==="work"){f.t+=dt;f.m.position.y=.4+Math.abs(Math.sin(now/120))*.3;if(f.t>7){f.m.position.y=.4;const i=f.inc;f.state="return";f.target=f.home;f.inc=null;if(i){i.got=i.got.filter(g=>g!==f);i.fin=(i.fin||0)+1;if(i.fin>=i.need.length){i.state="done";scene.remove(i.ring);hl(i.loc,false);if(typeof updateLivePaths==='function')updateLivePaths();feed(`Resolved: ${i.type} at ${i.loc}`);if(hoveredBuilding===i.loc)showBldgCard(hoveredBuilding)}}kpis()}}});
  incs.forEach(i=>{if(i.ring){const s=1+((now/700)%1)*1.2;i.ring.scale.set(s,s,s);i.ring.material.opacity=1-((now/700)%1)}});
  upd();
  updateBldgCardPos();

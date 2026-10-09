@@ -1,6 +1,9 @@
 # QDO System — Step-by-Step Live Demonstration Guide
 
-This guide provides an exact walkthrough to demonstrate that the **Quantum Disaster Resource Optimizer (QDO)** frontend and backend integration are working correctly according to the requested interactive workflow.
+This guide provides the exact demonstration flow for the **Quantum Disaster Resource Optimizer (QDO)**, highlighting:
+1. **Targeted Incident Addition**: Only the exact buildings you add an incident to are affected (no automatic scenario override).
+2. **Live Visual Paths**: Dynamic glowing 3D energy conduit arcs + ground laser lines physically connect **Amenity Center** to each affected building in real time.
+3. **Dedicated Simulation Execution**: Clicking **"Run Simulation"** operates the solver specifically for those active buildings and dispatches fleet vehicles to resolve them.
 
 ---
 
@@ -9,100 +12,83 @@ This guide provides an exact walkthrough to demonstrate that the **Quantum Disas
    ```bash
    python -m uvicorn server:app --reload --port 8000
    ```
-2. **Web Frontend**: Running on port 3000 (or open `QDO - Campus Emergency Dispatch.html` / `index.html` in browser).
+2. **Web Frontend**: Running on port 3000 (open [http://localhost:3000/#](http://localhost:3000/#) or `index.html` in browser).
 
 ---
 
-## 📋 Recommended Live Demonstration Workflow
+## 📋 Recommended Live Demonstration Walkthrough
 
-### Step 1: Initial State Verification (All Buildings Normal / No Threat)
+### Step 1: Initial Clean State (All Buildings Normal / No Threat)
 - **What to observe:**
-  - On page load, all campus buildings are completely **Normal / Safe**.
-  - All location pins across campus are **Green (Normal / Secure)**.
+  - On page load, all campus buildings are **100% SECURE**.
+  - All location pins across campus are **Green (Level 0 · Normal)**.
   - Active Incidents KPI reads `0`.
-  - Fleet readiness reads `100% Ready` (all vehicles stationed idle at the depot).
-  - Activity feed displays: `✓ System initialized: All campus sectors normal. Select a scenario or inject incident to dispatch.`
+  - Fleet readiness reads `100% Ready` (all vehicles stationed at the depot).
+  - No active energy paths exist on the map.
 - **Action to show:**
-  - Hover over any building (e.g., **Block 17**, **Auditorium**, or **Heritage Block**).
-  - **Result:** The glassmorphic card displays:
+  - Hover over **Block 17** or **Heritage Block**:
     - Status: `SECURE` (Green badge)
-    - Threat Level: `Level 0 · Normal`
-    - Danger Meter: Safe green level (0 / 5)
+    - Danger Meter: Safe green (0 / 5)
     - Active Incidents: `None`
 
 ---
 
-### Step 2: Add Incidents to Different Blocks (Live Model Reflection: Green ➔ Yellow ➔ Red)
+### Step 2: Add Incident to 1st Building (Witness Live Path from Amenity Center)
 - **Action:**
-  1. Under **"Report Incident"**:
-     - Choose **Block 17**, Type: **Fire**, Severity: **4**, People Affected: **40**.
-     - Click **"Add Incident"**.
-     - **Result:**
-       - An emergency ring appears around **Block 17**.
-       - The pin on Block 17 instantly shifts from **Green** to **Red (Critical/High Hazard)** with a pulsing beacon.
-       - The building emits an alert glow.
-       - Hovering over Block 17 shows **`HIGH HAZARD`**, **`Level 4`**, and **`Active Fire · 40 affected`**.
-       - *Vehicles remain stationed at the depot awaiting the Run Simulation command.*
-  2. Repeat for a second block:
-     - Choose **Heritage Block**, Type: **Accident**, Severity: **2**, People Affected: **5**.
-     - Click **"Add Incident"**.
-     - **Result:**
-       - Pin turns **Yellow (Elevated)** with yellow beacon.
-       - Hover card shows **`MODERATE / ELEVATED`**, **`Level 2`**.
-  3. Repeat for a third block:
-     - Choose **Sagar Hospital** (or **Auditorium**), Type: **Medical**, Severity: **5**, People Affected: **60**.
-     - Click **"Add Incident"**.
-     - **Result:**
-       - Pin turns **Bright Red (Critical)** with urgent red pulsing beacon.
-       - Active Incidents KPI reads `3`.
+  - Under **"Report incident"**:
+    - Select **Location**: `Block 17`
+    - **Type**: `Fire`, **Severity**: `4`, **People Affected**: `40`
+    - Click **"Add incident"**
+- **What happens immediately in the 3D Model:**
+  - **Only Block 17** is affected.
+  - An emergency ring appears at the base of Block 17.
+  - The pin on Block 17 turns **Red (Critical/High Hazard)** with a pulsing beacon.
+  - **A live, glowing 3D cyan energy conduit arc + ground laser line instantly illuminates, connecting Amenity Center directly to Block 17!**
+  - Energy packets visibly stream along the conduit from Amenity Center toward Block 17.
+  - Fleet vehicles remain stationed at the depot waiting for your simulation command.
 
 ---
 
-### Step 3: Update Fleet Inventory & Capacity
+### Step 3: Add Incident to 2nd Building (Second Live Path Appears)
 - **Action:**
-  - Under **"Fleet inventory & capacity"**:
-    - Increase **Ambulances** to `4` (or adjust Fire Trucks / Security).
-    - Click **"Update Fleet Capacity"**.
-  - **Result:**
-    - The 3D vehicle fleet stationed at the depot updates in real time.
-    - Live activity feed logs: `Fleet updated: 4 Ambulances, 2 Fire Trucks, 2 Security. Standing by at depot (Click "Run Simulation" to dispatch).`
+  - Under **"Report incident"**:
+    - Select **Location**: `Heritage Block`
+    - **Type**: `Accident`, **Severity**: `2`, **People Affected**: `6`
+    - Click **"Add incident"**
+- **What happens immediately:**
+  - **Only Heritage Block** is affected (along with Block 17).
+  - The pin on Heritage Block shifts to **Yellow (Elevated)**.
+  - **A second distinct live conduit path instantly branches out from Amenity Center to Heritage Block!**
+  - Now, two separate glowing routes radiate from Amenity Center to both incident sites.
 
 ---
 
-### Step 4: Choose Optimizer Solver or Preset Scenario
+### Step 4: Add Incident to 3rd Building (Optional)
 - **Action:**
-  - Under **"Optimizer & Solver"**:
-    - Select **QUBO Solver** (or **Greedy** or **⚖️ Compare Both**).
-    - Notice the **"Run Simulation"** button text dynamically updates:
-      - `▶️ Run Simulation (QUBO Solver)`
-      - `▶️ Run Simulation (Greedy Solver)`
-      - `⚖️ Run Benchmark (Compare Both)`
-    - *(Optional)* Click a scenario like **ALPHA**, **BETA**, **GAMMA**, or **STRESS** if you want to load a multi-incident preset.
-
----
-
-### Step 5: Click "Run Simulation" (Execution & Dispatch)
-- **Action:**
-  - Click the prominent **"Run Simulation"** button.
+  - Select **Location**: `Sagar Hospital` (or `Auditorium`)
+  - **Type**: `Medical`, **Severity**: `5`, **People**: `50` ➔ Click **"Add incident"**
 - **What happens:**
-  - The button activates with a high-tech glowing pulse.
-  - The selected solver (Quantum QUBO or Greedy) executes immediately.
-  - 3D emergency fleet vehicles dispatch from the depot and navigate along the blue pulsing campus road network.
-  - Vehicles arrive at target buildings, perform rescue operations, and resolve incidents.
-  - Real-time KPIs update:
-    - **Average Response Time**
-    - **Critical Sector Coverage (100%)**
-    - **Resource Utilization**
-  - When incidents at a building are resolved, the emergency ring clears, and the building pin turns **Green (SECURE)** again!
+  - A third glowing route branches from Amenity Center directly to Sagar Hospital.
+  - Active Incidents count reads `3`.
 
 ---
 
-### Step 6: Benchmark Comparison Modal (QUBO vs Greedy)
+### Step 5: Update Fleet Capacity & Choose Solver
 - **Action:**
-  - Click **⚖️ Compare Both** and click **"Run Simulation"** (or click the Compare Both button directly).
-- **What to observe:**
-  - Side-by-side comparison modal displays:
-    - Quantum Annealing Energy score.
-    - Formulation time, Sampler execution time (FastAPI / neal simulated annealing).
-    - Decision variables ($x_{i,r,k}$), quadratic couplers, and post-annealing feasibility repair guarantee.
-    - Explainability (XAI) rationale detailing why each allocation was selected.
+  - Under **"Fleet inventory & capacity"**, set Ambulances to `4` and click **"Update Fleet Capacity"**.
+  - Under **"Optimizer & Solver"**, choose **QUBO Solver** (or **Greedy**).
+  - The button reads: **`▶️ Run Simulation (QUBO Solver)`**.
+
+---
+
+### Step 6: Click "Run Simulation" (Execution & Resolution)
+- **Action:**
+  - Click the **"Run Simulation"** button.
+- **What happens:**
+  - Fleet vehicles dispatch along the road network specifically to the affected buildings (Block 17, Heritage Block, Sagar Hospital).
+  - The live paths from Amenity Center to those buildings remain illuminated while emergency personnel work.
+  - As each building's incident is resolved:
+    - The building's emergency ring clears.
+    - Its pin turns back to **Green (SECURE)**.
+    - **Its live path from Amenity Center gracefully disappears!**
+  - Once all incidents are resolved, the campus returns to 100% normal and secure.
