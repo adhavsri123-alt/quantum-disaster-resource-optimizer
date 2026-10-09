@@ -3011,8 +3011,9 @@ function tick(now){
  updatePins();
  rend.render(scene,cam);requestAnimationFrame(tick)}
 requestAnimationFrame(tick);kpis();
-// start with default scenario
-setTimeout(()=>{SC.ALPHA.forEach(s=>addInc(...s));},600);
+// Start with normal / safe baseline (no active threats on initial load)
+clearAll();
+feed(`<span style="color:#34d399">✓ System initialized: All campus sectors normal. Select a scenario or inject incident to dispatch.</span>`);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BACKEND API INTEGRATION LAYER
