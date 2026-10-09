@@ -1,11 +1,11 @@
 # QDO System — Step-by-Step Live Demonstration Guide
 
-This guide provides an exact walkthrough to demonstrate that the **Quantum Disaster Resource Optimizer (QDO)** frontend and backend integration are working correctly.
+This guide provides an exact walkthrough to demonstrate that the **Quantum Disaster Resource Optimizer (QDO)** frontend and backend integration are working correctly according to the requested interactive workflow.
 
 ---
 
 ## 🚀 Quick Prerequisites Check
-1. **Python FastAPI Backend**: Ensure running on port 8000:
+1. **Python FastAPI Backend**: Running on port 8000:
    ```bash
    python -m uvicorn server:app --reload --port 8000
    ```
@@ -13,84 +13,96 @@ This guide provides an exact walkthrough to demonstrate that the **Quantum Disas
 
 ---
 
-## 📋 Step-by-Step Demonstration Walkthrough
+## 📋 Recommended Live Demonstration Workflow
 
 ### Step 1: Initial State Verification (All Buildings Normal / No Threat)
 - **What to observe:**
-  - On page load, the 3D campus loads with **no active incidents**.
-  - All location pins across campus are **Green (Normal)**.
+  - On page load, all campus buildings are completely **Normal / Safe**.
+  - All location pins across campus are **Green (Normal / Secure)**.
   - Active Incidents KPI reads `0`.
-  - Fleet readiness reads `100% Ready` (all 3 ambulances & 2 rescue teams stationed idle at depot).
+  - Fleet readiness reads `100% Ready` (all vehicles stationed idle at the depot).
   - Activity feed displays: `✓ System initialized: All campus sectors normal. Select a scenario or inject incident to dispatch.`
 - **Action to show:**
   - Hover over any building (e.g., **Block 17**, **Auditorium**, or **Heritage Block**).
   - **Result:** The glassmorphic card displays:
     - Status: `SECURE` (Green badge)
     - Threat Level: `Level 0 · Normal`
-    - Danger Meter: Safe green level
+    - Danger Meter: Safe green level (0 / 5)
     - Active Incidents: `None`
 
 ---
 
-### Step 2: Role Authentication & Viewer Presence
+### Step 2: Add Incidents to Different Blocks (Live Model Reflection: Green ➔ Yellow ➔ Red)
 - **Action:**
-  - Click **Role** or **Switch Mode** in the top navigation bar.
-  - Choose **Viewer Mode**:
-    - Notice only the 3D model canvas is interactive (admin incident injection controls are hidden).
-    - Top bar displays: `👁️ Viewer viewing` badge.
-  - Switch to **Admin Mode**:
-    - Click Admin and enter credentials to authenticate.
-    - Top bar immediately displays `🛡️ Admin Active` alongside any connected viewer badges.
-    - Incident injection, scenario selectors, and solver algorithm controls unlock.
+  1. Under **"Report Incident"**:
+     - Choose **Block 17**, Type: **Fire**, Severity: **4**, People Affected: **40**.
+     - Click **"Add Incident"**.
+     - **Result:**
+       - An emergency ring appears around **Block 17**.
+       - The pin on Block 17 instantly shifts from **Green** to **Red (Critical/High Hazard)** with a pulsing beacon.
+       - The building emits an alert glow.
+       - Hovering over Block 17 shows **`HIGH HAZARD`**, **`Level 4`**, and **`Active Fire · 40 affected`**.
+       - *Vehicles remain stationed at the depot awaiting the Run Simulation command.*
+  2. Repeat for a second block:
+     - Choose **Heritage Block**, Type: **Accident**, Severity: **2**, People Affected: **5**.
+     - Click **"Add Incident"**.
+     - **Result:**
+       - Pin turns **Yellow (Elevated)** with yellow beacon.
+       - Hover card shows **`MODERATE / ELEVATED`**, **`Level 2`**.
+  3. Repeat for a third block:
+     - Choose **Sagar Hospital** (or **Auditorium**), Type: **Medical**, Severity: **5**, People Affected: **60**.
+     - Click **"Add Incident"**.
+     - **Result:**
+       - Pin turns **Bright Red (Critical)** with urgent red pulsing beacon.
+       - Active Incidents KPI reads `3`.
 
 ---
 
-### Step 3: Triggering a Predefined Incident Scenario
+### Step 3: Update Fleet Inventory & Capacity
 - **Action:**
-  - In the Scenario panel, click **ALPHA** (or **BETA**, **GAMMA**, **STRESS**).
+  - Under **"Fleet inventory & capacity"**:
+    - Increase **Ambulances** to `4` (or adjust Fire Trucks / Security).
+    - Click **"Update Fleet Capacity"**.
+  - **Result:**
+    - The 3D vehicle fleet stationed at the depot updates in real time.
+    - Live activity feed logs: `Fleet updated: 4 Ambulances, 2 Fire Trucks, 2 Security. Standing by at depot (Click "Run Simulation" to dispatch).`
+
+---
+
+### Step 4: Choose Optimizer Solver or Preset Scenario
+- **Action:**
+  - Under **"Optimizer & Solver"**:
+    - Select **QUBO Solver** (or **Greedy** or **⚖️ Compare Both**).
+    - Notice the **"Run Simulation"** button text dynamically updates:
+      - `▶️ Run Simulation (QUBO Solver)`
+      - `▶️ Run Simulation (Greedy Solver)`
+      - `⚖️ Run Benchmark (Compare Both)`
+    - *(Optional)* Click a scenario like **ALPHA**, **BETA**, **GAMMA**, or **STRESS** if you want to load a multi-incident preset.
+
+---
+
+### Step 5: Click "Run Simulation" (Execution & Dispatch)
+- **Action:**
+  - Click the prominent **"Run Simulation"** button.
+- **What happens:**
+  - The button activates with a high-tech glowing pulse.
+  - The selected solver (Quantum QUBO or Greedy) executes immediately.
+  - 3D emergency fleet vehicles dispatch from the depot and navigate along the blue pulsing campus road network.
+  - Vehicles arrive at target buildings, perform rescue operations, and resolve incidents.
+  - Real-time KPIs update:
+    - **Average Response Time**
+    - **Critical Sector Coverage (100%)**
+    - **Resource Utilization**
+  - When incidents at a building are resolved, the emergency ring clears, and the building pin turns **Green (SECURE)** again!
+
+---
+
+### Step 6: Benchmark Comparison Modal (QUBO vs Greedy)
+- **Action:**
+  - Click **⚖️ Compare Both** and click **"Run Simulation"** (or click the Compare Both button directly).
 - **What to observe:**
-  - Dynamic emergency rings immediately appear on the campus buildings.
-  - Relevant building pins shift from **Green** to **Yellow (Elevated)** or **Red (Critical)**.
-  - Hover over an affected building (e.g., Block 17 or Auditorium) to show:
-    - Incident type (Fire / Medical / Flood / Accident).
-    - Severity score (e.g., `Level 4` or `Level 5`).
-    - People affected and requested dispatch demand.
-
----
-
-### Step 4: Dispatch Execution via Quantum QUBO
-- **Action:**
-  - Select **Quantum QUBO** solver mode.
-  - Watch the dispatch execution:
-    - 3D emergency fleet vehicles automatically depart the depot.
-    - Blue pulsed Dijkstra navigation routes light up the campus pathways.
-    - Vehicles navigate along road networks, reach the target buildings, and resolve the incidents.
-    - KPI panel dynamically updates:
-      - **Average Response Time**
-      - **Critical Sector Coverage (100%)**
-      - **Resource Utilization** (Ambulance & Fire/Rescue capacity)
-
----
-
-### Step 5: Side-by-Side Algorithm Benchmark (QUBO vs. Greedy)
-- **Action:**
-  - Click the **"Compare Both"** button in the algorithm toggle bar.
-- **What to observe in the Modal:**
-  - A comprehensive comparison table displays side-by-side:
-    - **Neal Simulated Annealing QUBO** vs **Greedy Baseline**.
-    - Energy score, variable count ($x_{i,r,k}$ BQM decision variables), quadratic couplings.
-    - Formulation time, Sampler execution time, and post-sampling feasibility verification.
-    - Average response time reduction and unmet-demand penalty comparisons.
-  - **Explainability (XAI) section**:
-    - Explains why the QUBO solver selected each allocation based on severity weighting, depot distance, and capacity bottlenecks.
-
----
-
-### Step 6: Dynamic Real-Time Incident Injection
-- **Action:**
-  - Select a building from the dropdown (e.g., `Library Block`).
-  - Choose Type: `Fire`, Severity: `5`, People Affected: `80`.
-  - Click **Inject Emergency** (or click **Random Emergency**).
-- **What to observe:**
-  - Live incident instantly appears in the 3D scene.
-  - Solver re-evaluates the fleet allocation in real time and re-routes idle vehicles.
+  - Side-by-side comparison modal displays:
+    - Quantum Annealing Energy score.
+    - Formulation time, Sampler execution time (FastAPI / neal simulated annealing).
+    - Decision variables ($x_{i,r,k}$), quadratic couplers, and post-annealing feasibility repair guarantee.
+    - Explainability (XAI) rationale detailing why each allocation was selected.

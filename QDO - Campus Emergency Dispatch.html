@@ -935,6 +935,13 @@ body.mode-viewer #stage {
   <button class="alt" id="clr">Clear</button>
 </div>
 
+<div style="margin-top:12px;margin-bottom:8px;">
+  <button id="runSimBtn" style="width:100%;padding:12px 16px;background:linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%);color:#fff;border:1px solid #38bdf8;border-radius:10px;font-size:13px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(37,99,235,0.4);transition:all 0.2s cubic-bezier(0.16,1,0.3,1);">
+    <span style="font-size:16px;">▶️</span>
+    <span id="runSimBtnText">Run Simulation (Greedy Solver)</span>
+  </button>
+</div>
+
 <details style="margin-top:10px;background:#090e19;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;">
   <summary style="font-size:11px;font-weight:700;color:#38bdf8;cursor:pointer;user-select:none;">⚙️ QUBO Solver Parameters</summary>
   <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;font-size:11px;">
@@ -1989,9 +1996,28 @@ function buildBlock22(){
 }
 
 const MODELS={"Block 17":{b:buildGlassBlock,s:.49,ry:Math.PI/2},"Block 13":{b:buildMech,s:.68,ry:0},"Heritage Block":{b:buildHeritage,s:.55,ry:0},"NRI Hostel":{b:buildNRI,s:.44,ry:Math.PI*1.5},"Auditorium":{b:buildAuditorium,s:.60,ry:0},"Automobile Block":{b:buildAuto,s:.60,ry:0},"Library Block":{b:buildLibrary,s:.60,ry:0},"Management Block":{b:buildManagement,s:.60,ry:0},"Sagar Hospital":{b:buildHospital,s:.52,ry:0},"Amenity Center":{b:buildAmenityCenter,s:.60,ry:0},"Electronics Block":{b:buildElectronicsBlock,s:.58,ry:0},"Block 22":{b:buildBlock22,s:.56,ry:0}};
-function hl(n,on){const o=byName[n];if(!o)return;
- if(o.group)return; // glass block keeps its blue; the pulsing ring marks the incident
-else o.mesh.material.color.setHex(on?0xdc2626:o.mesh.userData.base)}
+function hl(n,on,sev=3){const o=byName[n];if(!o)return;
+ const colHex = on ? (sev>=4 ? 0xdc2626 : (sev===3 ? 0xd97706 : 0xca8a04)) : o.mesh.userData.base;
+ if(o.mesh && !o.group) o.mesh.material.color.setHex(on?colHex:o.mesh.userData.base);
+ if(o.group){
+  o.group.traverse(c=>{
+   if(c.isMesh&&c.material){
+    if(on){
+     if(c.material.emissive){
+      c.userData.prevEmissive = c.userData.prevEmissive || c.material.emissive.getHex();
+      c.material.emissive.setHex(sev>=4?0x991b1b:0x854d0e);
+      c.material.emissiveIntensity=0.55;
+     }
+    }else{
+     if(c.material.emissive){
+      c.material.emissive.setHex(c.userData.prevEmissive||0);
+      c.material.emissiveIntensity=0.0;
+     }
+    }
+   }
+  });
+ }
+}
 
 const meshes=[],byName={};
 B.forEach(([n,x,y,w,h,ht])=>{const [px,pz]=P(x,y);const m=new THREE.Mesh(new THREE.BoxGeometry(w*S,ht,h*S),new THREE.MeshLambertMaterial({color:n.includes("Hospital")?0x2563eb:0x334155}));
@@ -2026,14 +2052,18 @@ function rebuildFleet(numAmb=3,numFire=2,numSec=2){
 rebuildFleet(3,2,2);
 
 // incidents
-let incs=[],nextId=1,mode="greedy",log=[];
+let incs=[],nextId=1,mode="greedy",currentScenario="alpha",simulationActive=false,log=[];
 let lastSolverStats={runtimeMs:0,feasibleBeforeRepair:true,feasibleAfterRepair:true,energyScore:0,solverName:"Greedy Heuristic"};
 const rings=[];
 function addInc(loc,type,sev,ppl){const b=byName[loc];if(!b)return;
  const inc={id:nextId++,loc,type,sev,ppl,need:[...NEED[type]],got:[],state:"open",t:0,pos:b.pos};
- const r=new THREE.Mesh(new THREE.RingGeometry(1.5,2,32),new THREE.MeshBasicMaterial({color:0xef4444,side:THREE.DoubleSide,transparent:true,opacity:.9}));
+ const ringCol=(sev>=4)?0xef4444:(sev===3?0xf59e0b:0xeab308);
+ const r=new THREE.Mesh(new THREE.RingGeometry(1.5,2.4,32),new THREE.MeshBasicMaterial({color:ringCol,side:THREE.DoubleSide,transparent:true,opacity:.9}));
  r.rotation.x=-Math.PI/2;r.position.set(b.pos.x,.1,b.pos.z);scene.add(r);inc.ring=r;
- hl(loc,true);incs.push(inc);feed(`<span class="sev">${sev}</span>${type} at ${loc} · ${ppl} people`);assign()}
+ hl(loc,true,sev);incs.push(inc);
+ feed(`<span class="sev" style="background:${sev>=4?'#ef4444':(sev>=3?'#f59e0b':'#eab308')}">${sev}</span>${type} reported at <b>${loc}</b> (${ppl} affected) · <i style="color:#94a3b8;">Awaiting "Run Simulation"</i>`);
+ kpis();
+}
 function feed(h){const li=document.createElement('li');li.innerHTML=`<small>${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</small> ${h}`;const f=document.getElementById('feed');f.prepend(li);while(f.children.length>30)f.lastChild.remove()}
 
 const dist=(f,inc)=>f.m.position.distanceTo(inc.pos);
@@ -2565,7 +2595,7 @@ document.getElementById('clr').onclick=()=>{
   if(!checkAdminPermission('incident clearing')) return;
   clearAll();
 };
-function clearAll(){incs.forEach(i=>{scene.remove(i.ring);hl(i.loc,false)});incs=[];fleet.forEach(f=>{f.state="return";f.inc=null;f.target=f.home;f.rt=null});kpis()}
+function clearAll(){simulationActive=false;incs.forEach(i=>{scene.remove(i.ring);hl(i.loc,false)});incs=[];fleet.forEach(f=>{f.state="return";f.inc=null;f.target=f.home;f.rt=null});kpis()}
 const SC={
  ALPHA:[["Block 17","Fire",4,40],["Block 13","Medical",3,6],["Heritage Block","Accident",2,4],["Automobile Block","Accident",3,15],["Library Block","Medical",4,45],["Sagar Hospital","Medical",5,60],["Electronics Block","Fire",4,50],["Block 22","Medical",3,20]],
  BETA:[["Block 17","Flood",4,60],["Block 13","Medical",3,12],["NRI Hostel","Fire",4,35],["Heritage Block","Accident",2,5],["Auditorium","Medical",4,50],["Automobile Block","Fire",4,45],["Management Block","Fire",4,60],["Sagar Hospital","Accident",5,40],["Electronics Block","Medical",4,35],["Block 22","Fire",4,40]],
@@ -2582,21 +2612,93 @@ const SC={
 };
 document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{
   if(!checkAdminPermission('scenario dispatch')) return;
-  clearAll();setTimeout(()=>SC[b.dataset.s].forEach(s=>addInc(...s)),50);
+  clearAll();
+  const scKey=b.dataset.s;
+  currentScenario=scKey.toLowerCase();
+  feed(`Scenario <b>${scKey}</b> loaded. Incidents active on campus map. Select solver and click <b>"Run Simulation"</b>.`);
+  setTimeout(()=>SC[scKey].forEach(s=>addInc(...s)),50);
 });
+
+function updateRunSimButtonLabel(){
+  const lbl=document.getElementById('runSimBtnText');
+  if(!lbl) return;
+  if(mode==="qubo") lbl.textContent="Run Simulation (QUBO Solver)";
+  else if(mode==="greedy") lbl.textContent="Run Simulation (Greedy Solver)";
+  else if(mode==="compare") lbl.textContent="Run Benchmark (Compare Both)";
+}
+
 document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{
   if(b.dataset.m==="compare"){
-    runBenchmarkComparison();
+    document.querySelectorAll('#mode button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    mode="compare";
+    updateRunSimButtonLabel();
+    feed(`Mode: <b>Compare Both</b>. Click <b>"Run Simulation"</b> to view benchmark.`);
     return;
   }
   if(!checkAdminPermission('optimizer algorithm change')) return;
   document.querySelectorAll('#mode button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on');
   mode=b.dataset.m;
-  fleet.forEach(f=>{if(f.state==="go"){f.state="return";f.target=f.home;f.inc=null}});
-  incs.forEach(i=>i.got=[]);
-  assign();
+  updateRunSimButtonLabel();
+  feed(`Selected solver: <b>${mode==='qubo'?'QUBO Solver':'Greedy'}</b>. Click <b>"Run Simulation"</b> to execute dispatch.`);
 });
+
+// Run Simulation execution
+async function executeSimulation(){
+  if(!checkAdminPermission('run simulation')) return;
+  
+  const activeIncs = incs.filter(i=>i.state!=="done");
+  if(!activeIncs.length){
+    showAuthToast("No active incidents to dispatch! Report an incident or select a scenario first.");
+    return;
+  }
+  
+  const btn=document.getElementById('runSimBtn');
+  if(btn){
+    btn.style.transform='scale(0.96)';
+    btn.style.boxShadow='0 0 22px rgba(56,189,248,0.85)';
+    setTimeout(()=>{
+      btn.style.transform='none';
+      btn.style.boxShadow='';
+    },200);
+  }
+  
+  if(mode==="compare"){
+    feed(`<span style="color:#38bdf8">⚖️ Launching comparative benchmark: QUBO vs Greedy...</span>`);
+    if(typeof runBenchmarkComparisonBackend==='function'){
+      runBenchmarkComparisonBackend();
+    } else {
+      runBenchmarkComparison();
+    }
+    return;
+  }
+  
+  simulationActive=true;
+  feed(`<span style="color:#34d399">🚀 Executing <b>${mode==='qubo'?'Quantum QUBO':'Greedy'}</b> solver for ${activeIncs.length} incident(s)...</span>`);
+  
+  let dispatchedViaBackend=false;
+  if(backendOnline && currentScenario && SCENARIO_BACKEND_MAP[currentScenario.toUpperCase()]){
+    dispatchedViaBackend=await backendSolveAndDispatch(currentScenario, mode);
+  }
+  
+  if(!dispatchedViaBackend){
+    fleet.forEach(f=>{
+      if(f.state==="go"){
+        f.state="return";
+        f.target=f.home;
+        f.inc=null;
+      }
+    });
+    incs.forEach(i=>i.got=[]);
+    assign();
+  }
+  
+  feed(`<span style="color:#34d399">✓ Vehicles dispatched across campus network.</span>`);
+}
+
+const runSimBtnEl = document.getElementById('runSimBtn');
+if(runSimBtnEl) runSimBtnEl.onclick = executeSimulation;
 
 // Benchmark Comparison Modal Runner
 function runBenchmarkComparison(){
@@ -2730,7 +2832,8 @@ if(applyFleetBtn) applyFleetBtn.addEventListener('click',()=>{
  document.getElementById('cfgFire').value=f;
  document.getElementById('cfgSec').value=s;
  rebuildFleet(a,f,s);
- assign();
+ feed(`Fleet updated: ${a} Ambulances, ${f} Fire Trucks, ${s} Security. Standing by at depot (Click "Run Simulation" to dispatch).`);
+ kpis();
 });
 
 // QUBO parameter live update listeners
@@ -2741,13 +2844,13 @@ if(applyFleetBtn) applyFleetBtn.addEventListener('click',()=>{
    if(id==='paramWunmet') document.getElementById('vWunmet').textContent=el.value;
    if(id==='paramWtime') document.getElementById('vWtime').textContent=el.value;
    if(id==='paramSweeps') document.getElementById('vSweeps').textContent=el.value;
-   if(mode==='qubo') assign();
+   if(simulationActive && mode==='qubo') assign();
   });
  }
 });
 const feasCheck=document.getElementById('paramFeasRepair');
 if(feasCheck) feasCheck.addEventListener('change',()=>{
- if(mode==='qubo') assign();
+ if(simulationActive && mode==='qubo') assign();
 });
 
 // Occupancy data & real-time building statistics
@@ -3002,7 +3105,7 @@ function tick(now){
  
  fleet.forEach(f=>{
   if((f.state==="go"||f.state==="return")&&f.target){const d=f.target.clone().sub(f.m.position);const l=d.length();
-   if(l<.3){if(f.state==="go"){f.state="work";f.t=0}else{f.state="idle";f.target=null;assign()}}
+   if(l<.3){if(f.state==="go"){f.state="work";f.t=0}else{f.state="idle";f.target=null;if(simulationActive)assign()}}
    else{f.m.position.add(d.multiplyScalar(Math.min(1,SPEED*dt/l)));f.m.lookAt(f.target.x,.4,f.target.z)}}
   if(f.state==="work"){f.t+=dt;f.m.position.y=.4+Math.abs(Math.sin(now/120))*.3;if(f.t>7){f.m.position.y=.4;const i=f.inc;f.state="return";f.target=f.home;f.inc=null;if(i){i.got=i.got.filter(g=>g!==f);i.fin=(i.fin||0)+1;if(i.fin>=i.need.length){i.state="done";scene.remove(i.ring);hl(i.loc,false);feed(`Resolved: ${i.type} at ${i.loc}`);if(hoveredBuilding===i.loc)showBldgCard(hoveredBuilding)}}kpis()}}});
  incs.forEach(i=>{if(i.ring){const s=1+((now/700)%1)*1.2;i.ring.scale.set(s,s,s);i.ring.material.opacity=1-((now/700)%1)}});
