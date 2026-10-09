@@ -171,7 +171,7 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
 
 <div class="card"><h2>Optimizer</h2>
 <div class="seg" id="mode"><button class="on" data-m="greedy">Conventional greedy</button><button data-m="qubo">QUBO</button></div>
-<div class="row"><button class="alt" data-s="ALPHA">ALPHA</button><button class="alt" data-s="BETA">BETA</button><button class="alt" data-s="GAMMA">GAMMA</button><button class="alt" data-s="AUDITORIUM">AUDITORIUM</button><button class="alt" data-s="AUTO">AUTO</button><button class="alt" data-s="LIBRARY">LIBRARY</button><button class="alt" data-s="MGMT">MGMT</button><button class="alt" data-s="HOSPITAL">HOSPITAL</button><button class="alt" data-s="AMENITY">AMENITY</button><button class="alt" id="clr">Clear</button></div></div>
+<div class="row"><button class="alt" data-s="ALPHA">ALPHA</button><button class="alt" data-s="BETA">BETA</button><button class="alt" data-s="GAMMA">GAMMA</button><button class="alt" data-s="AUDITORIUM">AUDITORIUM</button><button class="alt" data-s="AUTO">AUTO</button><button class="alt" data-s="LIBRARY">LIBRARY</button><button class="alt" data-s="MGMT">MGMT</button><button class="alt" data-s="HOSPITAL">HOSPITAL</button><button class="alt" data-s="AMENITY">AMENITY</button><button class="alt" data-s="ELECTRONICS">ELECTRONICS</button><button class="alt" data-s="BLOCK22">BLOCK 22</button><button class="alt" id="clr">Clear</button></div></div>
 
 <div class="card"><h2>Live feed</h2><ul id="feed"></ul></div>
 </aside></main>
@@ -186,7 +186,9 @@ const B=[
   ["Block 17",          150,  520, 140, 220,   5],  // left col  × row B
   ["Auditorium",       1050,  520, 220, 160, 4.6],  // right col × row B
   ["Automobile Block", -120,  770, 210, 170,   5],  // far-left  × row C
+  ["Block 22",          150,  770, 200, 180, 5.5],  // left col  × row C
   ["Amenity Center",    600,  770, 230, 170,   5],  // spine     × row C (centre hub)
+  ["Electronics Block",1050,  770, 240, 160, 5.2],  // right col × row C
   ["Heritage Block",   1260,  770, 290,  80, 4.2],  // far-right × row C
   ["Block 13",          150, 1180, 270,  90,   4],  // left col  × row D
   ["Library Block",     600, 1180, 200, 155,   5],  // spine     × row D
@@ -973,7 +975,233 @@ function buildAmenityCenter(){
 
  return G;
 }
-const MODELS={"Block 17":{b:buildGlassBlock,s:.49,ry:Math.PI/2},"Block 13":{b:buildMech,s:.68,ry:0},"Heritage Block":{b:buildHeritage,s:.55,ry:0},"NRI Hostel":{b:buildNRI,s:.44,ry:Math.PI*1.5},"Auditorium":{b:buildAuditorium,s:.60,ry:0},"Automobile Block":{b:buildAuto,s:.60,ry:0},"Library Block":{b:buildLibrary,s:.60,ry:0},"Management Block":{b:buildManagement,s:.60,ry:0},"Sagar Hospital":{b:buildHospital,s:.52,ry:0},"Amenity Center":{b:buildAmenityCenter,s:.60,ry:0}};
+function buildElectronicsBlock(){
+ const G=new THREE.Group();
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+
+ // 1. Signboard canvas texture: ELECTRONICS BLOCK & Departments subtext
+ const sc=document.createElement('canvas');sc.width=512;sc.height=128;const sg=sc.getContext('2d');
+ sg.fillStyle='#1d4ed8';sg.fillRect(0,0,512,128);
+ sg.strokeStyle='#ffffff';sg.lineWidth=4;sg.strokeRect(4,4,504,120);
+ // DSCE emblem circle on left
+ sg.beginPath();sg.arc(44,64,28,0,Math.PI*2);sg.fillStyle='#ffffff';sg.fill();
+ sg.beginPath();sg.arc(44,64,24,0,Math.PI*2);sg.fillStyle='#0284c7';sg.fill();
+ sg.fillStyle='#ffffff';sg.font='bold 11px sans-serif';sg.textAlign='center';sg.fillText('DSCE',44,68);
+ // Main text
+ sg.fillStyle='#ffffff';sg.textAlign='left';sg.font='bold 34px "Segoe UI",sans-serif';
+ sg.fillText('ELECTRONICS BLOCK',88,56);
+ sg.fillStyle='#fde047';sg.font='600 15px "Segoe UI",sans-serif';
+ sg.fillText('Departments of EC, TE, IT, TC, INT, AMPS & MECH (PG)',88,96);
+ const signTex=new THREE.CanvasTexture(sc);
+
+ // 2. Dark ribbon glazing texture
+ const gc=document.createElement('canvas');gc.width=256;gc.height=64;const gg=gc.getContext('2d');
+ const gr=gg.createLinearGradient(0,0,0,64);gr.addColorStop(0,'#172554');gr.addColorStop(.5,'#1e40af');gr.addColorStop(1,'#0f172a');
+ gg.fillStyle=gr;gg.fillRect(0,0,256,64);
+ gg.strokeStyle='rgba(255,255,255,.2)';gg.lineWidth=2;
+ for(let x=0;x<=256;x+=32){gg.beginPath();gg.moveTo(x,0);gg.lineTo(x,64);gg.stroke()}
+ const glassTex=new THREE.CanvasTexture(gc);glassTex.wrapS=glassTex.wrapT=THREE.RepeatWrapping;glassTex.repeat.set(4,1);
+
+ // Materials
+ const mWall=new THREE.MeshStandardMaterial({color:0xe2ded6,roughness:.65});
+ const mColumn=new THREE.MeshStandardMaterial({color:0xd6d3cd,roughness:.6});
+ const mGlass=new THREE.MeshStandardMaterial({map:glassTex,color:0x93c5fd,metalness:.5,roughness:.15});
+ const mAtriumGlass=new THREE.MeshStandardMaterial({map:glassTex,color:0x60a5fa,metalness:.6,roughness:.1,transparent:true,opacity:.85});
+ const mRoofSoffit=new THREE.MeshStandardMaterial({color:0xd4d0c8,roughness:.5});
+ const mSign=new THREE.MeshStandardMaterial({map:signTex,roughness:.4});
+ const mSteel=new THREE.MeshStandardMaterial({color:0xe2e8f0,metalness:.8,roughness:.2});
+ const mWoodCanopy=new THREE.MeshStandardMaterial({color:0x451a03,roughness:.7});
+ const mRailing=new THREE.MeshStandardMaterial({color:0xf8fafc,roughness:.4});
+ const mPlant=new THREE.MeshStandardMaterial({color:0x15803d,roughness:.7});
+ const mPlinth=new THREE.MeshStandardMaterial({color:0x334155,roughness:.9});
+
+ // Base plinth
+ add(bx(40,.4,26),mPlinth,0,.2,0);
+
+ // Main Building Volume (5 stories)
+ const BW=36,BH=13,BD=15,F=5,fh=BH/F;
+ add(bx(BW,BH,BD),mWall,0,BH/2+.4,-1);
+
+ // Floor spandrel bands & horizontal ribbon windows
+ for(let f=0;f<F;f++){
+  const y=f*fh+fh/2+.4;
+  add(bx(BW-.4,fh*.6,.2),mGlass,0,y,BD/2-.9);
+  add(bx(BW+1,.45,BD+.6),mWall,0,f*fh+.4,-1);
+ }
+
+ // Vertical structural concrete columns/mullions dividing the facade bays
+ for(let c=-5;c<=5;c++){
+  if(Math.abs(c)>1){
+   add(bx(.65,BH,.5),mColumn,c*3.3,BH/2+.4,BD/2-.85);
+  }
+ }
+
+ // Deep projecting cantilevered roof canopy with angled soffit
+ add(bx(BW+3.5,.6,BD+3.5),mRoofSoffit,0,BH+.6,-1);
+ add(bx(BW+4,.4,BD+4),mSteel,0,BH+.9,-1);
+
+ // Protruding Central Blue Glass Atrium Tower
+ const CW=9.5,CH=BH+1.5,CD=4.5;
+ add(bx(CW,CH,CD),mAtriumGlass,0,CH/2+.4,BD/2+.8);
+ add(bx(.4,CH,.4),mSteel,-CW/2,CH/2+.4,BD/2+CD/2+.8);
+ add(bx(.4,CH,.4),mSteel,CW/2,CH/2+.4,BD/2+CD/2+.8);
+
+ // Prominent Blue ELECTRONICS BLOCK Signboard above 4th floor of atrium
+ add(new THREE.PlaneGeometry(8.5,2.1),mSign,0,CH-1.2,BD/2+CD/2+1.02);
+
+ // Elevated Pedestrian Entry Bridge / Ramp (leads up to 1st floor level)
+ const RW=4.2,RH=2.8,RL=9;
+ const rampMesh=add(bx(RW,.35,RL),mWall,0,RH/2+.4,BD/2+CD/2+RL/2+.6);
+ rampMesh.rotation.x=-.24;
+ add(bx(.5,RH,.5),mSteel,-RW/2+.3,RH/2+.4,BD/2+CD/2+3.2);
+ add(bx(.5,RH,.5),mSteel,RW/2-.3,RH/2+.4,BD/2+CD/2+3.2);
+ const railL=add(bx(.1,.7,RL),mRailing,-RW/2+.1,RH/2+.9,BD/2+CD/2+RL/2+.6);
+ railL.rotation.x=-.24;
+ const railR=add(bx(.1,.7,RL),mRailing,RW/2-.1,RH/2+.9,BD/2+CD/2+RL/2+.6);
+ railR.rotation.x=-.24;
+
+ // Cantilevered Dark Wood Entrance Canopy Portal
+ add(bx(5.2,.35,3.2),mWoodCanopy,0,RH+1.8,BD/2+CD/2+2.2);
+ add(bx(3.4,2.5,.1),new THREE.MeshStandardMaterial({color:0x1e293b,roughness:.3}),0,RH+1.3,BD/2+CD/2+1.05);
+
+ // Foreground manicured hedges and lawn perimeter
+ add(bx(38,.4,2.2),mPlant,0,.4,BD/2+CD/2+RL+1.2);
+ for(let h=-16;h<=16;h+=2.2){
+  if(Math.abs(h)>3)add(new THREE.DodecahedronGeometry(.42,1),mPlant,h,.7,BD/2+CD/2+RL+1.2);
+ }
+ add(new THREE.CylinderGeometry(.05,.08,7,8),mSteel,-6,3.6,BD/2+CD/2+RL+1.8);
+
+ return G;
+}
+
+function buildBlock22(){
+ const G=new THREE.Group();
+ const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);G.add(m);return m};
+ const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+
+ // 1. Sky-blue corner curtain wall texture with window grid & tilt vents
+ const gc=document.createElement('canvas');gc.width=256;gc.height=256;const gg=gc.getContext('2d');
+ const gr=gg.createLinearGradient(0,0,0,256);gr.addColorStop(0,'#2563eb');gr.addColorStop(.5,'#38bdf8');gr.addColorStop(1,'#1d4ed8');
+ gg.fillStyle=gr;gg.fillRect(0,0,256,256);
+ gg.strokeStyle='rgba(255,255,255,.32)';gg.lineWidth=2;
+ for(let x=0;x<=256;x+=32){gg.beginPath();gg.moveTo(x,0);gg.lineTo(x,256);gg.stroke()}
+ for(let y=0;y<=256;y+=36){gg.beginPath();gg.moveTo(0,y);gg.lineTo(256,y);gg.stroke()}
+ gg.fillStyle='rgba(255,255,255,.25)';
+ [[38,42],[102,42],[166,78],[70,114],[198,114]].forEach(([x,y])=>{
+  gg.strokeRect(x,y,26,24);gg.fillRect(x+2,y+2,22,20);
+ });
+ const glassGridTex=new THREE.CanvasTexture(gc);glassGridTex.wrapS=glassGridTex.wrapT=THREE.RepeatWrapping;glassGridTex.repeat.set(3,3);
+
+ // 2. "22" Building number plate canvas texture
+ const nc=document.createElement('canvas');nc.width=128;nc.height=128;const ng=nc.getContext('2d');
+ ng.fillStyle='#1d4ed8';ng.fillRect(0,0,128,128);
+ ng.strokeStyle='#ffffff';ng.lineWidth=6;ng.strokeRect(6,6,116,116);
+ ng.fillStyle='#ffffff';ng.font='bold 72px "Segoe UI",sans-serif';ng.textAlign='center';
+ ng.fillText('22',64,90);
+ const numTex=new THREE.CanvasTexture(nc);
+
+ // 3. Totem signpost: DSCE ... BLOCK 22
+ const tc=document.createElement('canvas');tc.width=256;tc.height=128;const tg=tc.getContext('2d');
+ tg.fillStyle='#1e40af';tg.fillRect(0,0,256,128);
+ tg.strokeStyle='#38bdf8';tg.lineWidth=4;tg.strokeRect(4,4,248,120);
+ tg.fillStyle='#ffffff';tg.textAlign='center';tg.font='bold 18px "Segoe UI",sans-serif';
+ tg.fillText('DAYANANDA SAGAR',128,38);
+ tg.font='bold 22px "Segoe UI",sans-serif';tg.fillStyle='#facc15';
+ tg.fillText('BLOCK 22',128,74);
+ tg.font='600 13px "Segoe UI",sans-serif';tg.fillStyle='#bae6fd';
+ tg.fillText('INFORMATION SCIENCE & TECH',128,106);
+ const totemTex=new THREE.CanvasTexture(tc);
+
+ // Materials
+ const mGlass=new THREE.MeshStandardMaterial({map:glassGridTex,color:0x7dd3fc,metalness:.6,roughness:.15,transparent:true,opacity:.9});
+ const mTerracotta=new THREE.MeshStandardMaterial({color:0x451a03,roughness:.75});
+ const mMasonry=new THREE.MeshStandardMaterial({color:0x6b442a,roughness:.85});
+ const mWhiteCap=new THREE.MeshStandardMaterial({color:0xf8fafc,roughness:.4});
+ const mWinPunched=new THREE.MeshStandardMaterial({color:0x0f172a,metalness:.7,roughness:.2});
+ const mNumSign=new THREE.MeshStandardMaterial({map:numTex,roughness:.4});
+ const mTotemSign=new THREE.MeshStandardMaterial({map:totemTex,roughness:.4});
+ const mPlinth=new THREE.MeshStandardMaterial({color:0x334155,roughness:.9});
+ const mPaving=new THREE.MeshStandardMaterial({color:0x475569,roughness:.85});
+ const mTrunk=new THREE.MeshStandardMaterial({color:0x785135,roughness:.9});
+ const mFrond=new THREE.MeshStandardMaterial({color:0x15803d,roughness:.6,side:THREE.DoubleSide});
+ const mShrub=new THREE.MeshStandardMaterial({color:0x166534,roughness:.8});
+ const mSteel=new THREE.MeshStandardMaterial({color:0x94a3b8,metalness:.8,roughness:.2});
+ const mBusYellow=new THREE.MeshStandardMaterial({color:0xfacc15,roughness:.3});
+ const mBusBlue=new THREE.MeshStandardMaterial({color:0x1d4ed8,roughness:.4});
+ const mWheel=new THREE.MeshStandardMaterial({color:0x18181b,roughness:.9});
+
+ // Base plinth & courtyard paving
+ add(bx(36,.4,32),mPlinth,0,.2,0);
+ add(bx(34,.05,16),mPaving,0,.42,8);
+
+ const BW=22,BD=18,H_TOTAL=16,H_PODIUM=3.8,H_GLASS=H_TOTAL-H_PODIUM;
+
+ // Ground Floor Podium (Terracotta brown granite)
+ add(bx(BW,H_PODIUM,BD),mTerracotta,0,H_PODIUM/2+.4,-1);
+
+ // Rear & Left wing solid masonry extension
+ add(bx(BW,H_GLASS,BD*.4),mMasonry,0,H_PODIUM+H_GLASS/2+.4,-BD*.3-1);
+ for(let f=1;f<=3;f++){
+  for(let w=-2;w<=2;w++){
+   add(bx(1.6,1.4,.1),mWinPunched,w*3.6,H_PODIUM+f*2.8,-BD/2-1.02);
+  }
+ }
+
+ // Corner Wrap-around Sky-Blue Glass Curtain Wall Box (Front & Right)
+ const GW=BW+.2,GD=BD*.75;
+ add(bx(GW,H_GLASS,.3),mGlass,0,H_PODIUM+H_GLASS/2+.4,GD/2-1);
+ add(bx(.3,H_GLASS,GD),mGlass,GW/2,H_PODIUM+H_GLASS/2+.4,-1);
+
+ // Hopper windows open at angle
+ [[-5,6,GD/2-.8],[-1,10,GD/2-.8],[4,7,GD/2-.8],[GW/2+.2,8,2],[GW/2+.2,11,-3]].forEach(([wx,wy,wz])=>{
+  const vent=add(bx(2.1,1.8,.08),new THREE.MeshStandardMaterial({color:0x38bdf8,metalness:.7,roughness:.1}),wx,H_PODIUM+wy,wz);
+  vent.rotation.x=-.28;
+ });
+
+ // Crisp white roof parapet cap
+ add(bx(GW+.6,.5,GD+.6),mWhiteCap,0,H_TOTAL+.65,-1);
+
+ // Ground floor entrance portal & sidelights
+ add(bx(4,2.8,.2),new THREE.MeshStandardMaterial({color:0x1c1917,roughness:.6}),-3,1.8,BD/2-.9);
+ add(bx(3,2.4,.1),new THREE.MeshStandardMaterial({color:0x60a5fa,transparent:true,opacity:.7}),-3,1.6,BD/2-.75);
+
+ // Blue "22" Number Plate on wall next to door
+ add(new THREE.PlaneGeometry(1.6,1.6),mNumSign,2,2.4,BD/2-.88);
+
+ // DSCE BLOCK 22 Totem Signboard on courtyard
+ add(new THREE.PlaneGeometry(3.2,1.6),mTotemSign,6,1.6,BD/2+3.2);
+ add(bx(.1,1.8,.1),mSteel,6-1.5,1.1,BD/2+3.15);
+ add(bx(.1,1.8,.1),mSteel,6+1.5,1.1,BD/2+3.15);
+
+ // Palm Tree in foreground courtyard
+ const makePalm=(px,pz)=>{
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22,.32,7.5,8),mTrunk);trunk.position.set(px,4.1,pz);trunk.rotation.z=.06;G.add(trunk);
+  for(let i=0;i<10;i++){
+   const a=(i/10)*Math.PI*2;const lf=new THREE.Mesh(new THREE.ConeGeometry(.75,3.6,4),mFrond);
+   lf.position.set(px+Math.cos(a)*1.2,7.6,pz+Math.sin(a)*1.2);lf.rotation.x=Math.sin(a)*.85;lf.rotation.z=-Math.cos(a)*.85;G.add(lf);
+  }
+ };
+ makePalm(11,BD/2+2.5);
+
+ // Planter beds & low hedges
+ add(bx(8,.45,2),mTerracotta,8,.45,BD/2+2.5);
+ for(let s=0;s<4;s++)add(new THREE.DodecahedronGeometry(.35,1),mShrub,6.5+s*1.2,.85,BD/2+2.5);
+
+ // Yellow Campus Shuttle Van parked in front
+ const vanG=new THREE.Group();
+ const vBody=new THREE.Mesh(bx(2.2,2.1,5.2),mBusYellow);vBody.position.y=1.4;vanG.add(vBody);
+ const vSt=new THREE.Mesh(bx(2.24,.35,5.22),mBusBlue);vSt.position.y=1.05;vanG.add(vSt);
+ const vWin=new THREE.Mesh(bx(2.22,.8,4.8),new THREE.MeshStandardMaterial({color:0x0f172a,metalness:.7,roughness:.2}));vWin.position.y=1.8;vanG.add(vWin);
+ const addW=(wx,wy,wz)=>{const wh=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.28,12),mWheel);wh.rotation.z=Math.PI/2;wh.position.set(wx,wy,wz);vanG.add(wh);};
+ addW(-1.1,.38,-1.5);addW(1.1,.38,-1.5);addW(-1.1,.38,1.5);addW(1.1,.38,1.5);
+ vanG.position.set(-8,0,BD/2+4);vanG.rotation.y=.15;
+ G.add(vanG);
+
+ return G;
+}
+
+const MODELS={"Block 17":{b:buildGlassBlock,s:.49,ry:Math.PI/2},"Block 13":{b:buildMech,s:.68,ry:0},"Heritage Block":{b:buildHeritage,s:.55,ry:0},"NRI Hostel":{b:buildNRI,s:.44,ry:Math.PI*1.5},"Auditorium":{b:buildAuditorium,s:.60,ry:0},"Automobile Block":{b:buildAuto,s:.60,ry:0},"Library Block":{b:buildLibrary,s:.60,ry:0},"Management Block":{b:buildManagement,s:.60,ry:0},"Sagar Hospital":{b:buildHospital,s:.52,ry:0},"Amenity Center":{b:buildAmenityCenter,s:.60,ry:0},"Electronics Block":{b:buildElectronicsBlock,s:.58,ry:0},"Block 22":{b:buildBlock22,s:.56,ry:0}};
 function hl(n,on){const o=byName[n];if(!o)return;
  if(o.group)return; // glass block keeps its blue; the pulsing ring marks the incident
 else o.mesh.material.color.setHex(on?0xdc2626:o.mesh.userData.base)}
@@ -1045,7 +1273,7 @@ const rnd=a=>a[Math.floor(Math.random()*a.length)];
 document.getElementById('rnd').onclick=()=>addInc(rnd(B)[0],rnd(Object.keys(NEED)),1+Math.floor(Math.random()*5),5+Math.floor(Math.random()*80));
 document.getElementById('clr').onclick=clearAll;
 function clearAll(){incs.forEach(i=>{scene.remove(i.ring);hl(i.loc,false)});incs=[];fleet.forEach(f=>{f.state="return";f.inc=null;f.target=f.home;f.rt=null});kpis()}
-const SC={ALPHA:[["Block 17","Fire",4,40],["Block 13","Medical",3,6],["Heritage Block","Accident",2,4],["Automobile Block","Accident",3,15],["Library Block","Medical",4,45],["Sagar Hospital","Medical",5,60]],BETA:[["Block 17","Flood",4,60],["Block 13","Medical",3,12],["NRI Hostel","Fire",4,35],["Heritage Block","Accident",2,5],["Auditorium","Medical",4,50],["Automobile Block","Fire",4,45],["Management Block","Fire",4,60],["Sagar Hospital","Accident",5,40]],GAMMA:[["Block 17","Accident",5,120],["Block 13","Medical",5,30],["Block 13","Fire",4,50],["Heritage Block","Medical",4,15],["NRI Hostel","Accident",3,10],["Auditorium","Fire",5,150],["Automobile Block","Flood",3,25],["Library Block","Fire",5,90],["Management Block","Medical",4,35],["Sagar Hospital","Medical",5,100],["Amenity Center","Fire",4,55]],AUDITORIUM:[["Auditorium","Fire",5,160],["Auditorium","Medical",4,40],["Block 17","Accident",3,15]],AUTO:[["Automobile Block","Fire",5,60],["Automobile Block","Medical",4,30],["Block 13","Accident",3,12]],LIBRARY:[["Library Block","Fire",4,80],["Library Block","Medical",4,45],["Management Block","Accident",3,10]],MGMT:[["Management Block","Fire",5,70],["Management Block","Medical",4,35],["Library Block","Accident",3,12]],HOSPITAL:[["Sagar Hospital","Medical",5,90],["Sagar Hospital","Accident",4,40],["Block 17","Medical",3,15]],AMENITY:[["Amenity Center","Fire",4,65],["Amenity Center","Medical",4,35],["Sagar Hospital","Medical",3,15]]};
+const SC={ALPHA:[["Block 17","Fire",4,40],["Block 13","Medical",3,6],["Heritage Block","Accident",2,4],["Automobile Block","Accident",3,15],["Library Block","Medical",4,45],["Sagar Hospital","Medical",5,60],["Electronics Block","Fire",4,50],["Block 22","Medical",3,20]],BETA:[["Block 17","Flood",4,60],["Block 13","Medical",3,12],["NRI Hostel","Fire",4,35],["Heritage Block","Accident",2,5],["Auditorium","Medical",4,50],["Automobile Block","Fire",4,45],["Management Block","Fire",4,60],["Sagar Hospital","Accident",5,40],["Electronics Block","Medical",4,35],["Block 22","Fire",4,40]],GAMMA:[["Block 17","Accident",5,120],["Block 13","Medical",5,30],["Block 13","Fire",4,50],["Heritage Block","Medical",4,15],["NRI Hostel","Accident",3,10],["Auditorium","Fire",5,150],["Automobile Block","Flood",3,25],["Library Block","Fire",5,90],["Management Block","Medical",4,35],["Sagar Hospital","Medical",5,100],["Amenity Center","Fire",4,55],["Electronics Block","Fire",5,80],["Block 22","Accident",4,45]],AUDITORIUM:[["Auditorium","Fire",5,160],["Auditorium","Medical",4,40],["Block 17","Accident",3,15]],AUTO:[["Automobile Block","Fire",5,60],["Automobile Block","Medical",4,30],["Block 13","Accident",3,12]],LIBRARY:[["Library Block","Fire",4,80],["Library Block","Medical",4,45],["Management Block","Accident",3,10]],MGMT:[["Management Block","Fire",5,70],["Management Block","Medical",4,35],["Library Block","Accident",3,12]],HOSPITAL:[["Sagar Hospital","Medical",5,90],["Sagar Hospital","Accident",4,40],["Block 17","Medical",3,15]],AMENITY:[["Amenity Center","Fire",4,65],["Amenity Center","Medical",4,35],["Sagar Hospital","Medical",3,15]],ELECTRONICS:[["Electronics Block","Fire",5,95],["Electronics Block","Medical",4,40],["Heritage Block","Accident",3,12]],BLOCK22:[["Block 22","Medical",5,80],["Block 22","Fire",4,35],["Block 17","Accident",2,10]]};
 document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{clearAll();setTimeout(()=>SC[b.dataset.s].forEach(s=>addInc(...s)),50)});
 document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#mode button').forEach(x=>x.classList.remove('on'));b.classList.add('on');mode=b.dataset.m;
  fleet.forEach(f=>{if(f.state==="go"){f.state="return";f.target=f.home;f.inc=null}});incs.forEach(i=>i.got=[]);assign()});
@@ -1056,7 +1284,9 @@ const OCCUPANCY={
  "Block 17":{base:380,type:"Architecture & Design",icon:"🏛️"},
  "Auditorium":{base:650,type:"Main Campus Auditorium",icon:"🎭"},
  "Automobile Block":{base:290,type:"Mechanical & Auto Labs",icon:"⚙️"},
+ "Block 22":{base:390,type:"Information Science & Tech Hub",icon:"🏢"},
  "Amenity Center":{base:420,type:"Student Dining & Union",icon:"☕"},
+ "Electronics Block":{base:560,type:"ECE, Telecom & IT Engineering",icon:"⚡"},
  "Heritage Block":{base:210,type:"Administrative & Heritage",icon:"🏛️"},
  "Block 13":{base:340,type:"Engineering & Robotics",icon:"💻"},
  "Library Block":{base:520,type:"Central Digital Library",icon:"📚"},
