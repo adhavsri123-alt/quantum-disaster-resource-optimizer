@@ -27,3 +27,7 @@ dwave-neal>=0.6
 
 # --- Utilities ---
 scipy>=1.11     # optional; used for alternative distance computations
+
+# --- Authentication (Twilio SMS Verify) ---
+twilio>=9.0
+python-dotenv>=1.0

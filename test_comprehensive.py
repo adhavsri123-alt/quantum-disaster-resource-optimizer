@@ -160,6 +160,18 @@ class TestQUBOCandidateLevels(unittest.TestCase):
                 self.assertEqual(len(levels), len(set(levels)),
                                  f"Duplicates found for req={req}, cap={cap}: {levels}")
 
+    def test_uncontested_resource_exact_level(self):
+        """Uncontested resource (is_contested=False) returns single exact level [min(req, cap)]."""
+        levels = get_candidate_levels(15, 100, is_contested=False)
+        self.assertEqual(levels, [15])
+        levels_cap = get_candidate_levels(50, 30, is_contested=False)
+        self.assertEqual(levels_cap, [30])
+
+    def test_uncontested_resource_zero_req_or_cap(self):
+        """Uncontested resource with 0 req or 0 cap returns [0]."""
+        self.assertEqual(get_candidate_levels(0, 100, is_contested=False), [0])
+        self.assertEqual(get_candidate_levels(15, 0, is_contested=False), [0])
+
 
 class TestQUBOOneHotPenaltyMath(unittest.TestCase):
     """Verify one-hot penalty coefficients in the QUBO matrix."""

@@ -7,3 +7,4 @@ venv/
 !.env.example
 .pytest_cache/
 .streamlit/secrets.toml
+data/responders.json

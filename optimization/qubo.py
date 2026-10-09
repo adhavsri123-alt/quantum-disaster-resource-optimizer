@@ -74,7 +74,7 @@ QUBO_PENALTIES = {
 }
 
 
-def get_candidate_levels(req: int, cap: int) -> List[int]:
+def get_candidate_levels(req: int, cap: int, is_contested: bool = True) -> List[int]:
     """
     Generate discrete candidate allocation quantities for QUBO decision variables.
 
@@ -84,26 +84,37 @@ def get_candidate_levels(req: int, cap: int) -> List[int]:
         Required quantity of resource for an emergency.
     cap : int
         Total available capacity of resource type.
+    is_contested : bool, optional
+        Whether the resource is contested campus-wide (total demand > capacity).
+        Defaults to True for backwards compatibility and unit testing.
 
     Returns
     -------
     List[int]
         Unique, sorted non-negative integer candidate quantities.
     """
-    if req <= 0:
+    if req <= 0 or cap <= 0:
         return [0]
-    # For small requirements (e.g. ambulances, rescue teams, personnel <= 5),
+
+    # If the resource is uncontested campus-wide (total demand <= capacity),
+    # there is zero competition among emergencies and no capacity rationing is needed.
+    # Discretizing into intermediate fractional levels would create artificial local
+    # energy minima separated by one-hot penalty barriers that trap MCMC/SA samplers.
+    if not is_contested:
+        return [min(req, cap)]
+
+    # For small requirements (e.g. ambulances, rescue teams <= 5),
     # provide exact integer choices [0..min(req, cap)].
     if req <= 5:
         return list(range(0, min(req, cap) + 1))
 
-    # For larger requirements (e.g. medical supplies), provide discrete percentage steps
+    # For larger contested requirements, provide discrete percentage steps
     raw_levels = [
         0,
         int(round(0.25 * req)),
         int(round(0.50 * req)),
         int(round(0.75 * req)),
-        req,
+        min(req, cap),
     ]
     quantities = sorted(list(set(min(cap, max(0, q)) for q in raw_levels)))
     return quantities
@@ -151,6 +162,17 @@ class QUBOFormulator:
         W_travel = float(self.penalties.get("response_time_weight", 10.0))
         W_util = float(self.penalties.get("utilisation_reward", 2.0))
 
+        # Determine campus-wide contention per resource type.
+        # A resource is contested if total demand across active emergencies exceeds capacity.
+        total_demands = {
+            rtype: sum(getattr(em, f"{rtype}_required") for em in emergencies)
+            for rtype in RESOURCE_TYPES
+        }
+        contested = {
+            rtype: total_demands[rtype] > capacity[rtype]
+            for rtype in RESOURCE_TYPES
+        }
+
         # Track variables grouped by (em_id, rtype)
         em_res_vars: Dict[Tuple[str, str], List[str]] = {}
 
@@ -169,7 +191,7 @@ class QUBOFormulator:
             for rtype in RESOURCE_TYPES:
                 req = reqs[rtype]
                 cap = capacity[rtype]
-                quantities = get_candidate_levels(req, cap)
+                quantities = get_candidate_levels(req, cap, is_contested=contested[rtype])
 
                 key = (em.id, rtype)
                 em_res_vars[key] = []
