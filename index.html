@@ -426,6 +426,23 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
   background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
   box-shadow: 0 6px 22px rgba(56, 189, 248, 0.55);
 }
+.auth-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #fca5a5;
+  font-size: 11px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+.auth-error span:first-child {
+  font-size: 14px;
+  flex-shrink: 0;
+}
 /* User Status in Header */
 .auth-profile-pill {
   display: inline-flex;
@@ -596,7 +613,7 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
         <label for="aEmail">Admin Command Email <span class="req">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">✉️</span>
-          <input type="email" id="aEmail" required placeholder="admin.dispatch@dayanandasagar.edu" autocomplete="email">
+          <input type="email" id="aEmail" required value="chauhandevansh780@gmail.com" placeholder="chauhandevansh780@gmail.com" autocomplete="email">
         </div>
       </div>
 
@@ -604,7 +621,7 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
         <label for="aUsername">Admin Username / Callsign <span class="req">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">🛡️</span>
-          <input type="text" id="aUsername" required placeholder="e.g. Commander Chauhan" autocomplete="name">
+          <input type="text" id="aUsername" required value="devansh08" placeholder="devansh08" autocomplete="name">
         </div>
       </div>
 
@@ -612,7 +629,7 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
         <label for="aPhone">Emergency Contact Phone Number <span class="req">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">📞</span>
-          <input type="tel" id="aPhone" required placeholder="+91 98765 43210" autocomplete="tel">
+          <input type="tel" id="aPhone" required value="8354053230" placeholder="8354053230" autocomplete="tel">
         </div>
       </div>
 
@@ -620,6 +637,8 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
         <span>⚡</span>
         <p><strong>Admin Clearance:</strong> Full authority to declare emergencies, dispatch fire/medical units, and run quantum QUBO optimization algorithms.</p>
       </div>
+
+      <div id="adminError" class="auth-error" style="display:none;"></div>
 
       <button type="submit" class="auth-submit-btn admin-btn" id="btnAdminSubmit">
         <span>Authorize & Enter Console (Admin)</span>
@@ -1829,17 +1848,49 @@ viewerForm.addEventListener('submit', (e) => {
   });
 });
 
+const ADMIN_CREDENTIALS = {
+  email: "chauhandevansh780@gmail.com",
+  username: "devansh08",
+  phone: "8354053230"
+};
+
 adminForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const email = document.getElementById('aEmail').value.trim();
   const username = document.getElementById('aUsername').value.trim();
   const phone = document.getElementById('aPhone').value.trim();
-  if(!email || !username || !phone) return;
+  const errBox = document.getElementById('adminError');
+
+  const cleanInputPhone = phone.replace(/\D/g, '');
+  const cleanAdminPhone = ADMIN_CREDENTIALS.phone.replace(/\D/g, '');
+
+  const isEmailMatch = email.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase();
+  const isUserMatch = username.toLowerCase() === ADMIN_CREDENTIALS.username.toLowerCase();
+  const isPhoneMatch = cleanInputPhone === cleanAdminPhone;
+
+  if (!isEmailMatch || !isUserMatch || !isPhoneMatch) {
+    if (errBox) {
+      errBox.innerHTML = '<span>⚠️</span> <span><b>Access Denied:</b> Invalid admin credentials. Verification failed.</span>';
+      errBox.style.display = 'flex';
+    }
+    return;
+  }
+
+  if (errBox) errBox.style.display = 'none';
+
   setAuthenticatedUser({
     role: 'admin',
-    email,
-    username,
-    phone
+    email: ADMIN_CREDENTIALS.email,
+    username: ADMIN_CREDENTIALS.username,
+    phone: ADMIN_CREDENTIALS.phone
+  });
+});
+
+['aEmail', 'aUsername', 'aPhone'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', () => {
+    const err = document.getElementById('adminError');
+    if (err) err.style.display = 'none';
   });
 });
 
