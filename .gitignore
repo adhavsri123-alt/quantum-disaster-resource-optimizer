@@ -1,3 +1,16 @@
+# Node & System
 node_modules/
 .DS_Store
 *.log
+
+# Python & Environment
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.streamlit/secrets.toml
+data/responders.json

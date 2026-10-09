@@ -1,0 +1,33 @@
+# ============================================================
+# Quantum Disaster Resource Optimizer (QDO) — Requirements
+# ============================================================
+# Install with:  pip install -r requirements.txt
+# Python 3.9+
+
+# --- Core data / numerical ---
+numpy>=1.24
+pandas>=2.0
+
+# --- Campus graph & shortest paths ---
+networkx>=3.1
+
+# --- Visualisation (Streamlit UI — Stage 3) ---
+plotly>=5.15
+streamlit>=1.28
+
+# --- Optimisation ---
+# PyQUBO: QUBO formulation and compilation
+pyqubo>=1.4
+
+# dimod: D-Wave's BQM library + SimulatedAnnealing sampler (runs locally)
+dimod>=0.12
+
+# neal: Simulated Annealing sampler for BQMs (no QPU required)
+dwave-neal>=0.6
+
+# --- Utilities ---
+scipy>=1.11     # optional; used for alternative distance computations
+
+# --- Authentication (Twilio SMS Verify) ---
+twilio>=9.0
+python-dotenv>=1.0
