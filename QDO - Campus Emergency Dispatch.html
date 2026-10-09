@@ -189,7 +189,7 @@ const B=[
   ["Block 22",          150,  770, 200, 180, 5.5],  // left col  × row C
   ["Amenity Center",    600,  770, 230, 170,   5],  // spine     × row C (centre hub)
   ["Electronics Block",1050,  770, 240, 160, 5.2],  // right col × row C
-  ["Heritage Block",   1260,  770, 290,  80, 4.2],  // far-right × row C
+  ["Heritage Block",   1530,  770, 290,  80, 4.2],  // far-right × row C
   ["Block 13",          150, 1180, 270,  90,   4],  // left col  × row D
   ["Library Block",     600, 1180, 200, 155,   5],  // spine     × row D
   ["Management Block", 1050, 1180, 175, 155, 5.2],  // right col × row D
@@ -257,13 +257,13 @@ const road=(x1,y1,x2,y2,w=2.2)=>{
 //   spine      x=600   full N-S
 //   row A      y=170   Hospital
 //   row B      y=520   Block17 / Auditorium
-//   row C      y=770   Automobile / Amenity(hub) / Heritage
+//   row C      y=770   Automobile / Block22 / Amenity / Electronics / Heritage
 //   row D      y=1180  Block13 / Library(hub) / Management
 //   row F      y=1530  NRI Hostel
 //   left col   x=150
 //   right col  x=1050
 //   far-left   x=-120
-//   far-right  x=1260
+//   far-right  x=1530
 // ════════════════════════════════════════════════════════
 
 // ── SPINE (full N-S backbone) ─────────────────────────
@@ -273,7 +273,7 @@ road(600, 170, 600, 1530);
 road(420, 170, 780, 170);
 
 // ── ROW B – full E-W (far-left to far-right) ─────────
-road(-120, 520, 1260, 520);
+road(-120, 520, 1530, 520);
 // Block17 and Auditorium north spurs to their buildings
 road(150, 420, 150, 520);
 road(1050, 420, 1050, 520);
@@ -288,10 +288,10 @@ road(150, 520, 150, 1180);
 road(1050, 520, 1050, 1180);
 
 // ── Far-right col (row B → row C) ────────────────────
-road(1260, 520, 1260, 770);
+road(1530, 520, 1530, 770);
 
 // ── ROW C – full E-W ─────────────────────────────────
-road(-120, 770, 1260, 770);
+road(-120, 770, 1530, 770);
 
 // ── ROW D – left col to right col ────────────────────
 road(150, 1180, 1050, 1180);
