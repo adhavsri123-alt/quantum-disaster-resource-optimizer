@@ -532,6 +532,25 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
   opacity: 1;
   pointer-events: auto;
 }
+
+/* --- Viewer Mode: Model & Hover Telemetry Only --- */
+body.mode-viewer .kpis,
+body.mode-viewer aside,
+body.mode-viewer .note,
+body.mode-viewer nav[aria-label="Pages"],
+body.mode-viewer #tip,
+body.mode-viewer #legend {
+  display: none !important;
+}
+body.mode-viewer main {
+  grid-template-columns: 1fr !important;
+  padding: 12px 24px 20px;
+}
+body.mode-viewer #stage {
+  height: calc(100vh - 84px);
+  min-height: 600px;
+  width: 100%;
+}
 </style></head><body>
 
 <!-- Access Authentication Gateway Modal -->
@@ -613,7 +632,7 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
         <label for="aEmail">Admin Command Email <span class="req">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">✉️</span>
-          <input type="email" id="aEmail" required value="chauhandevansh780@gmail.com" placeholder="chauhandevansh780@gmail.com" autocomplete="email">
+          <input type="email" id="aEmail" required placeholder="admin.dispatch@dayanandasagar.edu" autocomplete="email">
         </div>
       </div>
 
@@ -621,7 +640,7 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
         <label for="aUsername">Admin Username / Callsign <span class="req">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">🛡️</span>
-          <input type="text" id="aUsername" required value="devansh08" placeholder="devansh08" autocomplete="name">
+          <input type="text" id="aUsername" required placeholder="Enter admin username / callsign" autocomplete="name">
         </div>
       </div>
 
@@ -629,7 +648,7 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
         <label for="aPhone">Emergency Contact Phone Number <span class="req">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">📞</span>
-          <input type="tel" id="aPhone" required value="8354053230" placeholder="8354053230" autocomplete="tel">
+          <input type="tel" id="aPhone" required placeholder="+91 98765 43210" autocomplete="tel">
         </div>
       </div>
 
@@ -1832,6 +1851,15 @@ function setAuthenticatedUser(user){
   profName.textContent = user.username;
   profSub.textContent = user.role === 'admin' ? ('📞 ' + user.phone) : ('🏷️ ' + user.designation);
   feed(`Authenticated as <b>${user.role.toUpperCase()}</b>: ${user.username} (${user.role === 'admin' ? 'Hotline: ' + user.phone : user.designation})`);
+
+  if(user.role === 'viewer'){
+    document.body.classList.add('mode-viewer');
+    document.body.classList.remove('mode-admin');
+  } else {
+    document.body.classList.remove('mode-viewer');
+    document.body.classList.add('mode-admin');
+  }
+  setTimeout(resize, 60);
 }
 
 viewerForm.addEventListener('submit', (e) => {
